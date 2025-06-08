@@ -3,7 +3,7 @@ use regex::Regex;
 
 fn main() {
 
-    let token_list : Vec<String> = lex("src_files/test_1.c");
+    let token_list : Vec<String> = lex("src_files/basic_lexing/test_no_ret.c");
     
     for token in token_list {
         println!("{}", token);
@@ -32,7 +32,17 @@ fn lex(src : &str) -> Vec<String> {
     ";", 
     r"\(",
     r"\)",
-    "[0-9]+"
+    "[0-9]+",
+    "<=",
+    ">=",
+    "==",
+    "=",
+    r"\+=",
+    "-=",
+    r"\+\+",
+    "--",
+    r"\+",
+    "-"
     ];
 
     for token in allowed_tokens {
