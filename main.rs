@@ -23,41 +23,39 @@ fn lex(src : &str) -> Vec<String> {
     //Read the source file here
     let contents : String = fs::read_to_string(src).expect("Should have been able to read from file");
 
-    let mut regex_list : Vec<regex::Regex> = Vec::new();
-
-    //Regex values of all (so far) allowed tokens
-    let allowed_tokens : Vec<&str> = 
-    vec![
-    "[[:alpha:]]+",
-    ";", 
-    r"\(",
-    r"\)",
-    "[0-9]+",
-    "<=",
-    ">=",
-    "==",
-    "=",
-    r"\+=",
-    "-=",
-    r"\+\+",
-    "--",
-    r"\+",
-    "-"
+    let regex_list : Vec<regex::Regex> = vec![
+        Regex::new(r"[[:alpha:]]+").unwrap(),
+        Regex::new(r";").unwrap(),
+        Regex::new(r"\(").unwrap(),
+        Regex::new(r"\)").unwrap(),
+        Regex::new(r"\{").unwrap(),
+        Regex::new(r"\}").unwrap(),
+        Regex::new(r"[0-9]+").unwrap(),
     ];
 
-    for token in allowed_tokens {
-        regex_list.push(Regex::new(&token).unwrap());
-    }
+    
 
     //Regex matching across all constructed regexes.
-    for reg in regex_list {
-        if reg.is_match(&contents) {
-            for token in reg.captures_iter(&contents) {
-                token_list.push(token[0].to_string())
+
+    for token in contents.split_ascii_whitespace() {
+
+        for reg in &regex_list {
+            
+            for pattern in reg.find_iter(&token) {
+                token_list.push(token[pattern.start() .. pattern.end()].to_string())
             }
+
         }
-        
     }
+
+    // for reg in regex_list {
+    //     if reg.is_match(&contents) {
+    //         for token in reg.captures_iter(&contents) {
+    //             token_list.push(token[0].to_string())
+    //         }
+    //     }
+        
+    // }
 
     
 
