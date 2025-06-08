@@ -1,12 +1,14 @@
 use std::fs;
-use regex::Regex;
+mod token;
+
+use crate::token::{lex_file, Token};
 
 fn main() {
 
-    let token_list : Vec<String> = lex("src_files/basic_lexing/test_no_ret.c");
+    let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
     
-    for token in token_list {
-        println!("{}", token);
+    for tok in token_list {
+        println!("{}", tok.val);
     }
 }
 
@@ -15,38 +17,14 @@ fn main() {
 Pass a source file to this function to receive a list of all tokens contained in
 the source file.
 */
-fn lex(src : &str) -> Vec<String> {
+fn lex(src : &str) -> Vec<Token> {
 
     //Create a dynamic size vector to append tokens from regex into.
-    let mut token_list : Vec<String> = Vec::new();
 
     //Read the source file here
     let contents : String = fs::read_to_string(src).expect("Should have been able to read from file");
 
-    let regex_list : Vec<regex::Regex> = vec![
-        Regex::new(r"[[:alpha:]]+").unwrap(),
-        Regex::new(r";").unwrap(),
-        Regex::new(r"\(").unwrap(),
-        Regex::new(r"\)").unwrap(),
-        Regex::new(r"\{").unwrap(),
-        Regex::new(r"\}").unwrap(),
-        Regex::new(r"[0-9]+").unwrap(),
-    ];
-
     
-
-    //Regex matching across all constructed regexes.
-
-    for token in contents.split_ascii_whitespace() {
-
-        for reg in &regex_list {
-            
-            for pattern in reg.find_iter(&token) {
-                token_list.push(token[pattern.start() .. pattern.end()].to_string())
-            }
-
-        }
-    }
 
     // for reg in regex_list {
     //     if reg.is_match(&contents) {
@@ -59,5 +37,8 @@ fn lex(src : &str) -> Vec<String> {
 
     
 
-    return token_list;
+    return lex_file(contents);
 }
+
+
+
