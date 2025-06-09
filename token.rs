@@ -1,8 +1,13 @@
 
 use regex::Regex;
+/* 
+This file is responsible for the first part of Compiler construction which is
+the lexer/tokenizer. It implements the TokenType Enum, and the Token struct
+which will be used by the parser to implement parse trees.
 
+*/
 
-enum TokenType {
+pub enum TokenType {
     Identifier,
     //Separators are (, ), {, }, ;
     Separator,

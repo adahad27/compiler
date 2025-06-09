@@ -6,5 +6,8 @@
 # already existing elements were commented out
 
 #/target
+test.rs
+parse
 main
+test
 .vscode/

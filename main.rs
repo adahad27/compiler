@@ -19,23 +19,8 @@ the source file.
 */
 fn lex(src : &str) -> Vec<Token> {
 
-    //Create a dynamic size vector to append tokens from regex into.
-
-    //Read the source file here
-    let contents : String = fs::read_to_string(src).expect("Should have been able to read from file");
-
     
-
-    // for reg in regex_list {
-    //     if reg.is_match(&contents) {
-    //         for token in reg.captures_iter(&contents) {
-    //             token_list.push(token[0].to_string())
-    //         }
-    //     }
-        
-    // }
-
-    
+    let contents : String = fs::read_to_string(src).expect("Should have been able to read from file");   
 
     return lex_file(contents);
 }
