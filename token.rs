@@ -65,27 +65,47 @@ fn is_separator(input : &String) -> bool {
     return false;
 }
 
+fn is_keyword(input : &String) -> bool {
+    if 
+    input == "if" ||
+    input == "else if" ||
+    input == "else" ||
+    input == "while" ||
+    input == "for" ||
+    input == "return" {
+        return true;
+    }
+    return false;
+}
+
+fn is_primitive(input : &String) -> bool {
+    if 
+    input == "int" ||
+    input == "float" ||
+    input == "bool" ||
+    input == "char" {
+        return true;
+    }
+    return false;
+}
+
 pub fn construct_token(input : &String)-> Token{
     let mut t_type : TokenType = TokenType::Default;
     
     let identifier_regex : Regex = Regex::new(r"[[:alpha:]]+").unwrap();
     let integer_regex : Regex = Regex::new(r"[0-9]+").unwrap();
 
+    //TODO: Replace this with a match statement
+
     if is_separator(&input){
         t_type = TokenType::Separator;
     }
-    else if 
-    input == "if" ||
-    input == "else if" ||
-    input == "else" ||
-    input == "while" ||
-    input == "for" ||
-    input == "return" ||
-    input == "int" ||
-    input == "float" ||
-    input == "bool" ||
-    input == "char" {
+    else if is_keyword(&input)
+    {
         t_type = TokenType::Keyword;
+    }
+    else if is_primitive(&input) {
+        t_type = TokenType::Primitive;
     }
     else if is_operator(&input){
         t_type = TokenType::Operator;

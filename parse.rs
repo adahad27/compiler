@@ -18,6 +18,23 @@ x   function declaration -> primitive identifier () ;
 
 static mut CURRENT_TOKEN_INDEX : u32 = 0; 
 
+mod token;
+
+fn get_current_token_index() -> u32 {
+    return CURRENT_TOKEN_INDEX;
+}
+
+fn next_token_index() -> u32 {
+    CURRENT_TOKEN_INDEX += 1;
+    return CURRENT_TOKEN_INDEX;
+}
+
+fn prev_token_index() ->u32 {
+    CURRENT_TOKEN_INDEX -= 1;
+    return CURRENT_TOKEN_INDEX;
+}
+
+
 #[allow(non_camel_case_types)]
 enum NodeType {
     
@@ -159,8 +176,18 @@ fn parse(mut current_node : Node, tokens : &Vec<Token>) -> Option<Node> {
             //Create a new node of type function declaration            
             let function_declaration_node : Node = create_func_decl_node();
 
-            //Parse and assign new node to be child of current_node
-            current_node.children.push(parse(function_declaration_node));
+            
+            /* 
+            Parse the function declaration node first. If it returns a node, then
+            the parser is free to continue, if it returns None, then the parser
+            must backtrack.
+            */
+            if let Option::Some(node) = parse(function_declaration_node) {
+                current_node.children.push(node);
+            }
+            else {
+                return Option::None;
+            }
 
             
             //Return current_node
@@ -176,14 +203,34 @@ fn parse(mut current_node : Node, tokens : &Vec<Token>) -> Option<Node> {
             let open_curly_node : Node = create_open_curly_node();
             let body_node : Node = create_body_node();
             let close_curly_node : Node = create_close_curly_node();
-            
-            current_node.children.push(parse(primitive_node));
-            current_node.children.push(parse(identifier_node));
-            current_node.children.push(parse(open_paren_node));
-            current_node.children.push(parse(close_paren_node));
-            current_node.children.push(parse(open_curly_node));
-            current_node.children.push(parse(body_node));
-            current_node.children.push(parse(close_curly_node));
+
+            /* 
+            To add backtracking, all we should theoretically have to do is add
+            elif statements here to check if the next rule matches, and keep on
+            doing this exhaustively for each rule.
+            */
+            if
+            let Option::Some(prim_node) = parse(primitive_node) &&
+            let Option::Some(iden_node) = parse(identifier_node) &&
+            let Option::Some(o_paren_node) = parse(open_paren_node) &&
+            let Option::Some(c_paren_node) = parse(close_paren_node) &&
+            let Option::Some(o_curly_node) = parse(open_curly_node) &&
+            let Option::Some(b_node) = parse(body_node) &&
+            let Option::Some(c_curly_node) = parse(close_curly_node) 
+            {
+
+                current_node.children.push(prim_node);
+                current_node.children.push(iden_node);
+                current_node.children.push(o_paren_node);
+                current_node.children.push(c_paren_node);
+                current_node.children.push(o_curly_node);
+                current_node.children.push(parse(b_node));
+                current_node.children.push(parse(c_curly_node));
+                
+            }
+            else {
+                return Option::None;
+            }
 
             return Option::Some(current_node);
         }
@@ -194,59 +241,63 @@ fn parse(mut current_node : Node, tokens : &Vec<Token>) -> Option<Node> {
             We check if the current token has primitive_type, if so, then it is
             the correct case and we can return.
             */
-            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Primitive {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Identifier => {
 
-            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Identifier {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
-
-            return Option::Some(current_node);
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Open_Paren => {
 
-            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Open_Paren {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Close_Paren => {
-
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Close_Paren {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Open_Curly => {
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Open_Curly {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
@@ -257,53 +308,67 @@ fn parse(mut current_node : Node, tokens : &Vec<Token>) -> Option<Node> {
             let constant_node : Node = create_constant_node();
             let semicolon_node : Node = create_semicolon_node();
 
-            current_node.push(parse(return_node));
-            current_node.push(parse(constant_node));
-            current_node.push(parse(semicolon_node));
+
+            if
+            let Option::Some(ret_node) = parse(return_node) &&
+            let Option::Some(cons_node) = parse(constant_node) &&
+            let Option::Some(semi_node) = parse(semicolon_node) 
+            {
+                current_node.push(ret_node);
+                current_node.push(cons_node);
+                current_node.push(semi_node);
+
+            }
+
+            
 
             return Option::Some(current_node);
         }
 
         NodeType::Close_Curly => {
-
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Close_Curly {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Return => {
-
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Return {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Constant => {
-
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Constant {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
 
         NodeType::Semicolon => {
-
+            let TokenType(token_type, value) = tokens[get_current_token_index()];
             if token_type != TokenType::Semicolon {
                 //Throw some kind of error here for backtracking
                 return Option::None;
             }
             current_node.value = value;
+            next_token_index();
 
             return Option::Some(current_node);
         }
