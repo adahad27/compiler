@@ -38,14 +38,16 @@ enum NodeType {
 struct Node {
     is_terminal : bool,
     node_type : NodeType,
-    children : Vec<Node>
+    children : Vec<Node>,
+    value : String
 }
 
 fn create_start_node() -> Node {
     return Node {
         is_terminal : false,
         node_type : NodeType::Program_Start,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -53,7 +55,8 @@ fn create_func_decl_node() -> Node {
     return Node {
         is_terminal : false,
         node_type : NodeType::Function_Declaration,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -61,7 +64,8 @@ fn create_primitive_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Primitive,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -69,7 +73,8 @@ fn create_identifier_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Identifier,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -77,7 +82,8 @@ fn create_open_paren_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Open_Paren,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -85,7 +91,8 @@ fn create_close_paren_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Close_Paren,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -93,7 +100,8 @@ fn create_body_node() -> Node {
     return Node {
         is_terminal : false,
         node_type : NodeType::Body,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -101,7 +109,8 @@ fn create_open_curly_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Open_Curly,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -109,7 +118,8 @@ fn create_close_curly_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Close_Curly,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -117,7 +127,8 @@ fn create_return_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Return,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -125,7 +136,8 @@ fn create_constant_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Constant,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
@@ -133,11 +145,12 @@ fn create_semicolon_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Semicolon,
-        children : Vec::new()
+        children : Vec::new(),
+        value : "".to_string()
     }
 }
 
-fn parse(mut current_node : Node) -> Node {
+fn parse(mut current_node : Node, tokens : &Vec<Token>) -> Option<Node> {
 
     match current_node.node_type {
 
@@ -151,7 +164,7 @@ fn parse(mut current_node : Node) -> Node {
 
             
             //Return current_node
-            return current_node;
+            return Option::Some(current_node);
         }
         
         NodeType::Function_Declaration => {
@@ -172,32 +185,70 @@ fn parse(mut current_node : Node) -> Node {
             current_node.children.push(parse(body_node));
             current_node.children.push(parse(close_curly_node));
 
-            return current_node;
+            return Option::Some(current_node);
         }
 
         NodeType::Primitive => {
 
-            return current_node;
+            /* 
+            We check if the current token has primitive_type, if so, then it is
+            the correct case and we can return.
+            */
+            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            if token_type != TokenType::Primitive {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Identifier => {
 
-            return current_node;
+            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            if token_type != TokenType::Identifier {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
+
+            return Option::Some(current_node);
         }
 
         NodeType::Open_Paren => {
 
-            return current_node;
+            let TokenType(token_type, value) = tokens[CURRENT_TOKEN_INDEX];
+            if token_type != TokenType::Open_Paren {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Close_Paren => {
 
-            return current_node;
+            if token_type != TokenType::Close_Paren {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Open_Curly => {
+            if token_type != TokenType::Open_Curly {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
 
-            return current_node;
+            return Option::Some(current_node);
         }
 
         NodeType::Body => {
@@ -210,27 +261,51 @@ fn parse(mut current_node : Node) -> Node {
             current_node.push(parse(constant_node));
             current_node.push(parse(semicolon_node));
 
-            return current_node;
+            return Option::Some(current_node);
         }
 
         NodeType::Close_Curly => {
 
-            return current_node;
+            if token_type != TokenType::Close_Curly {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Return => {
 
-            return current_node;
+            if token_type != TokenType::Return {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Constant => {
 
-            return current_node;
+            if token_type != TokenType::Constant {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
         NodeType::Semicolon => {
 
-            return current_node;
+            if token_type != TokenType::Semicolon {
+                //Throw some kind of error here for backtracking
+                return Option::None;
+            }
+            current_node.value = value;
+
+            return Option::Some(current_node);
         }
 
     }
