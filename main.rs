@@ -1,6 +1,6 @@
 use std::fs;
 mod token;
-
+mod parse;
 use crate::token::{lex_file, Token};
 
 fn main() {
