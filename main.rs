@@ -1,7 +1,9 @@
 use std::fs;
 mod token;
 mod parse;
+mod generation;
 use crate::token::{lex_file, Token};
+use crate::generation::generate_code;
 
 fn main() {
 
@@ -10,6 +12,10 @@ fn main() {
     for tok in token_list {
         println!("{}", tok.val);
     }
+
+    let filename : String = "main_generated.asm".to_string();
+
+    generate_code(&filename);
 }
 
 
