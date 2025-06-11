@@ -47,7 +47,7 @@ fn prev_token_index() ->usize {
 
 
 #[allow(non_camel_case_types)]
-enum NodeType {
+pub enum NodeType {
     
     Program_Start,
     Function_Declaration,
@@ -63,14 +63,14 @@ enum NodeType {
     Semicolon
 }
 
-struct Node {
-    is_terminal : bool,
-    node_type : NodeType,
-    children : Vec<Node>,
-    value : String
+pub struct Node {
+    pub is_terminal : bool,
+    pub node_type : NodeType,
+    pub children : Vec<Node>,
+    pub value : String
 }
 
-fn create_start_node() -> Node {
+pub fn create_start_node() -> Node {
     return Node {
         is_terminal : false,
         node_type : NodeType::Program_Start,
@@ -173,12 +173,13 @@ fn create_semicolon_node() -> Node {
     return Node {
         is_terminal : true,
         node_type : NodeType::Semicolon,
+
         children : Vec::new(),
         value : "".to_string()
     }
 }
 
-fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Node> {
+pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Node> {
 
     match current_node.node_type {
 
