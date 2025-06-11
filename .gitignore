@@ -11,3 +11,5 @@ parse
 main
 test
 .vscode/
+main_handwritten
+*.o
