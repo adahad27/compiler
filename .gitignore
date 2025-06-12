@@ -13,3 +13,4 @@ test
 .vscode/
 main_handwritten
 *.o
+*.out

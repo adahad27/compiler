@@ -4,7 +4,7 @@ mod parse;
 mod generation;
 use crate::token::{lex_file, Token};
 use crate::generation::generate_code;
-use crate::parse::{parse, Node, create_start_node};
+use crate::parse::{parse, create_node, Node, NodeType};
 
 fn main() {
 
@@ -14,7 +14,7 @@ fn main() {
     //     println!("{}", tok.val);
     // }
 
-    let mut current_node : Node = create_start_node();
+    let mut current_node : Node = create_node(NodeType::Program_Start);
 
     if let Option::Some(node) = parse(current_node, &token_list) {
         
