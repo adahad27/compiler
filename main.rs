@@ -14,12 +14,13 @@ fn main() {
     //     println!("{}", tok.val);
     // }
 
-    let current_node : Node = create_start_node();
+    let mut current_node : Node = create_start_node();
 
     if let Option::Some(node) = parse(current_node, &token_list) {
         
         let filename : String = "main_generated.asm".to_string();
-        generate_code(&filename, node);
+        let mut parse_tree : Node = node;
+        generate_code(&filename, &parse_tree);
     }
     else {
         println!("Sorry there was a parsing error!");

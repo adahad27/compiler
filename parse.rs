@@ -13,7 +13,8 @@ This is the grammer that is currently being implemeted by the parser:
     program_start -> function declaration
 x   function declaration -> primitive identifier () ;
     function declaration -> primitive identifier () {body}
-    body -> keyword constant ;
+    body -> ret_stmt
+    ret_stmt -> keyword constant ;
 */
 
 static mut CURRENT_TOKEN_INDEX : u32 = 0; 
@@ -58,7 +59,8 @@ pub enum NodeType {
     Open_Curly,
     Body,
     Close_Curly,
-    Return, //return is a reserved keyword
+    ReturnStatement,
+    Keyword,
     Constant,
     Semicolon
 }
@@ -153,8 +155,17 @@ fn create_close_curly_node() -> Node {
 
 fn create_return_node() -> Node {
     return Node {
+        is_terminal : false,
+        node_type : NodeType::ReturnStatement,
+        children : Vec::new(),
+        value : "".to_string()
+    }
+}
+
+fn create_keyword_node() -> Node {
+    return Node {
         is_terminal : true,
-        node_type : NodeType::Return,
+        node_type : NodeType::Keyword,
         children : Vec::new(),
         value : "".to_string()
     }
@@ -321,17 +332,11 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
         NodeType::Body => {
 
             let return_node : Node = create_return_node();
-            let constant_node : Node = create_constant_node();
-            let semicolon_node : Node = create_semicolon_node();
 
-            if let
-            (Option::Some(ret_node), Option::Some(cons_node), Option::Some(semi_node)) = 
-            (parse(return_node, tokens), parse(constant_node, tokens), parse(semicolon_node, tokens)) 
+            if let Option::Some(ret_node) = parse(return_node, tokens) 
             
             {
                 current_node.children.push(ret_node);
-                current_node.children.push(cons_node);
-                current_node.children.push(semi_node);
             }
             else {
                 return Option::None;
@@ -354,7 +359,29 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             return Option::Some(current_node);
         }
 
-        NodeType::Return => {
+        NodeType::ReturnStatement => {
+            let return_node : Node = create_keyword_node();
+            let constant_node : Node = create_constant_node();
+            let semicolon_node : Node = create_semicolon_node();
+
+            if let
+            (Option::Some(ret_node), Option::Some(cons_node), Option::Some(semi_node)) = 
+            (parse(return_node, tokens), parse(constant_node, tokens), parse(semicolon_node, tokens)) 
+            
+            {
+                current_node.children.push(ret_node);
+                current_node.children.push(cons_node);
+                current_node.children.push(semi_node);
+            }
+            else {
+                return Option::None;
+            }
+
+            
+
+            return Option::Some(current_node);
+        }
+        NodeType::Keyword => {
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Keyword) {
                 //Throw some kind of error here for backtracking
@@ -365,7 +392,6 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
 
             return Option::Some(current_node);
         }
-
         NodeType::Constant => {
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Constant) {
