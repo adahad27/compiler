@@ -87,14 +87,14 @@ pub fn create_node(n_type : NodeType) -> Node {
 
 
 
-pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Node> {
+pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
 
     match current_node.node_type {
 
         NodeType::Program_Start => {
 
             //Create a new node of type function declaration            
-            let function_declaration_node : Node = create_node(NodeType::Function_Declaration);
+            let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
 
             
             /* 
@@ -102,27 +102,25 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             the parser is free to continue, if it returns None, then the parser
             must backtrack.
             */
-            if let Option::Some(node) = parse(function_declaration_node, tokens) {
-                current_node.children.push(node);
+
+            if parse(&mut function_declaration_node, tokens) {
+                current_node.children.push(function_declaration_node);
+                return true;
             }
             else {
-                return Option::None;
+                return false;
             }
-
-            
-            //Return current_node
-            return Option::Some(current_node);
         }
         
         NodeType::Function_Declaration => {
 
-            let primitive_node : Node = create_node(NodeType::Primitive);
-            let identifier_node : Node = create_node(NodeType::Identifier);
-            let open_paren_node : Node = create_node(NodeType::Separator);
-            let close_paren_node : Node = create_node(NodeType::Separator);
-            let open_curly_node : Node = create_node(NodeType::Separator);
-            let body_node : Node = create_node(NodeType::Body);
-            let close_curly_node : Node = create_node(NodeType::Separator);
+            let mut primitive_node : Node = create_node(NodeType::Primitive);
+            let mut identifier_node : Node = create_node(NodeType::Identifier);
+            let mut open_paren_node : Node = create_node(NodeType::Separator);
+            let mut close_paren_node : Node = create_node(NodeType::Separator);
+            let mut open_curly_node : Node = create_node(NodeType::Separator);
+            let mut body_node : Node = create_node(NodeType::Body);
+            let mut close_curly_node : Node = create_node(NodeType::Separator);
 
             /* 
             To add backtracking, all we should theoretically have to do is add
@@ -130,32 +128,28 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             doing this exhaustively for each rule.
             */
 
-            if let
-            (
-                Option::Some(prim_node), Option::Some(iden_node), Option::Some(o_paren_node),
-                Option::Some(c_paren_node), Option::Some(o_curly_node), Option::Some(b_node),
-                Option::Some(c_curly_node)
-            ) =
-            (
-                parse(primitive_node, tokens), parse(identifier_node, tokens), parse(open_paren_node, tokens),
-                parse(close_paren_node, tokens), parse(open_curly_node, tokens), parse(body_node, tokens),
-                parse(close_curly_node, tokens)
-            ) 
+            if 
+            parse(&mut primitive_node, tokens) &&
+            parse(&mut identifier_node, tokens) &&
+            parse(&mut open_paren_node, tokens) &&
+            parse(&mut close_paren_node, tokens) &&
+            parse(&mut open_curly_node, tokens) &&
+            parse(&mut body_node, tokens) &&
+            parse(&mut close_curly_node, tokens)
             {
-                current_node.children.push(prim_node);
-                current_node.children.push(iden_node);
-                current_node.children.push(o_paren_node);
-                current_node.children.push(c_paren_node);
-                current_node.children.push(o_curly_node);
-                current_node.children.push(b_node);
-                current_node.children.push(c_curly_node);
+                current_node.children.push(primitive_node);
+                current_node.children.push(identifier_node);
+                current_node.children.push(open_paren_node);
+                current_node.children.push(close_paren_node);
+                current_node.children.push(open_curly_node);
+                current_node.children.push(body_node);
+                current_node.children.push(close_curly_node);
+                
+                return true;
             }
             else {
-                return Option::None;
+                return false;
             }
-            
-
-            return Option::Some(current_node);
         }
 
         NodeType::Primitive => {
@@ -168,12 +162,12 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Primitive) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
 
         NodeType::Identifier => {
@@ -181,12 +175,12 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Identifier) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
 
         NodeType::Separator => {
@@ -194,152 +188,150 @@ pub fn parse(mut current_node : Node, tokens : &Vec<token::Token>) -> Option<Nod
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Separator) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
-            println!("Parsed value {}", &val);
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
 
         NodeType::Body => {
 
             while tokens[get_current_token_index()].val != "}".to_string(){
-                let stmt_node : Node = create_node(NodeType::Statement);
+                let mut stmt_node : Node = create_node(NodeType::Statement);
 
-                if let Option::Some(ret_node) = parse(stmt_node, tokens)                 
+                if parse(&mut stmt_node, tokens)                 
                 {
-                    current_node.children.push(ret_node);
+                    current_node.children.push(stmt_node);
                 }
                 else 
                 {
-                    return Option::None;
+                    return false;
                 }
 
             }
-            return Option::Some(current_node);
+            return true;
             
         }
 
         NodeType::Statement => {
             if tokens[get_current_token_index()].val == "return".to_string() {
-                let return_node : Node = create_node(NodeType::ReturnStatement);
+                let mut return_node : Node = create_node(NodeType::ReturnStatement);
 
-                if let Option::Some(ret_node) = parse(return_node, tokens) 
-                
+                if parse(&mut return_node, tokens) 
                 {
-                    current_node.children.push(ret_node);
+                    current_node.children.push(return_node);
+                    return true;
                 }
                 else {
-                    return Option::None;
+                    return false;
                 }
             }
             else if is_primitive(&tokens[get_current_token_index()].val) {
                 //Then we have found a variable declaration
-                let return_node : Node = create_node(NodeType::VarDecl);
+                let mut return_node : Node = create_node(NodeType::VarDecl);
 
-                if let Option::Some(ret_node) = parse(return_node, tokens) 
-                
+                if parse(&mut return_node, tokens) 
                 {
-                    current_node.children.push(ret_node);
+                    current_node.children.push(return_node);
+                    return true;
                 }
                 else {
-                    return Option::None;
+                    return false;
                 }
                 
             }
-            return Option::Some(current_node);
+            return false;
         }
         NodeType::VarDecl => {
-            let primitive_node : Node = create_node(NodeType::Primitive);
-            let identity_node : Node = create_node(NodeType::Identifier);
+            let mut primitive_node : Node = create_node(NodeType::Primitive);
+            let mut identity_node : Node = create_node(NodeType::Identifier);
 
-            if let 
-            (Option::Some(prim_node), Option::Some(iden_node)) = 
-            (parse(primitive_node, tokens), parse(identity_node, tokens)) {
+            if 
+            parse(&mut primitive_node, tokens) && parse(&mut identity_node, tokens)
+            {
                 
-                current_node.children.push(prim_node);
-                current_node.children.push(iden_node);
+                current_node.children.push(primitive_node);
+                current_node.children.push(identity_node);
                 
-                let semicolon_node : Node = create_node(NodeType::Separator);
-                let operator_node : Node = create_node(NodeType::Operator);
-                let constant_node : Node = create_node(NodeType::Constant);
+                let mut semicolon_node : Node = create_node(NodeType::Separator);
+                let mut operator_node : Node = create_node(NodeType::Operator);
+                let mut constant_node : Node = create_node(NodeType::Constant);
 
-                if let Option::Some(semi_node) = parse(semicolon_node, tokens)
+                if parse(&mut semicolon_node, tokens)
                 {
-                    current_node.children.push(semi_node);
+                    current_node.children.push(semicolon_node);
+                    return true;
                 }
-                else if let (Option::Some(op_node), Option::Some(const_node), Option::Some(semi_node))
-                 = (parse(operator_node, tokens), parse(constant_node, tokens), parse(semicolon_node, tokens)) 
+                else if 
+                parse(&mut operator_node, tokens) &&
+                parse(&mut constant_node, tokens) &&
+                parse(&mut semicolon_node, tokens)
                 {
-                    current_node.children.push(op_node);
-                    current_node.children.push(const_node);
-                    current_node.children.push(semi_node);
+                    current_node.children.push(operator_node);
+                    current_node.children.push(constant_node);
+                    current_node.children.push(semicolon_node);
                 }
                 else {
-                    return Option::None;
+                    return false;
                 }
-                return Option::Some(current_node);
+                return true;
             }
 
-            return Option::None;
+            return false;
         }
         NodeType::ReturnStatement => {
-            let return_node : Node = create_node(NodeType::Keyword);
-            let constant_node : Node = create_node(NodeType::Constant);
-            let semicolon_node : Node = create_node(NodeType::Separator);
+            let mut return_node : Node = create_node(NodeType::Keyword);
+            let mut constant_node : Node = create_node(NodeType::Constant);
+            let mut semicolon_node : Node = create_node(NodeType::Separator);
 
-            if let
-            (Option::Some(ret_node), Option::Some(cons_node), Option::Some(semi_node)) = 
-            (parse(return_node, tokens), parse(constant_node, tokens), parse(semicolon_node, tokens)) 
-            
+            if 
+            parse(&mut return_node, tokens) &&
+            parse(&mut constant_node, tokens) &&
+            parse(&mut semicolon_node, tokens)
             {
-                current_node.children.push(ret_node);
-                current_node.children.push(cons_node);
-                current_node.children.push(semi_node);
+                current_node.children.push(return_node);
+                current_node.children.push(constant_node);
+                current_node.children.push(semicolon_node);
+                return true;
             }
             else {
-                return Option::None;
+                return false;
             }
-
-            
-
-            return Option::Some(current_node);
         }
         NodeType::Keyword => {
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Keyword) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
         NodeType::Operator => {
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Operator) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
-            println!("Parsed value {}", &val);
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
         NodeType::Constant => {
             let token::Token{token_type, val} = &tokens[get_current_token_index()];
             if !matches!(token_type, token::TokenType::Constant) {
                 //Throw some kind of error here for backtracking
-                return Option::None;
+                return false;
             }
             current_node.value = val.clone();
             next_token_index();
 
-            return Option::Some(current_node);
+            return true;
         }
 
 

@@ -16,11 +16,10 @@ fn main() {
 
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
-    if let Option::Some(node) = parse(current_node, &token_list) {
+    if parse(&mut current_node, &token_list) {
         
         let filename : String = "main_generated.asm".to_string();
-        let mut parse_tree : Node = node;
-        generate_code(&filename, &parse_tree);
+        generate_code(&filename, &current_node);
     }
     else {
         println!("Sorry there was a parsing error!");
