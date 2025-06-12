@@ -53,20 +53,8 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node) {
                 generate_from_tree(program_string, node);
             }
         }
-        NodeType::Open_Paren => {
-            println!("Open_Paren Node encountered");
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node);
-            }
-        }
-        NodeType::Close_Paren => {
-            println!("Close_Paren Node encountered");
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node);
-            }
-        }
-        NodeType::Open_Curly => {
-            println!("Open_Curly Node encountered");
+        NodeType::Separator => {
+            println!("Separator Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node);
             }
@@ -77,8 +65,20 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node) {
                 generate_from_tree(program_string, node);
             }
         }
-        NodeType::Close_Curly => {
-            println!("Close_Curly Node encountered");
+        NodeType::VarDecl => {
+            println!("VarDecl Node encountered");
+            for node in &parse_tree.children {
+                generate_from_tree(program_string, node);
+            }
+        }
+        NodeType::Statement => {
+            println!("Statement Node encountered");
+            for node in &parse_tree.children {
+                generate_from_tree(program_string, node);
+            }
+        }
+        NodeType::Operator => {
+            println!("Operator Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node);
             }
@@ -99,12 +99,6 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node) {
         }
         NodeType::Constant => {
             println!("Constant Node encountered with value {}", parse_tree.value);
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node);
-            }
-        }
-        NodeType::Semicolon => {
-            println!("Semicolon Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node);
             }

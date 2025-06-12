@@ -47,7 +47,8 @@ pub fn is_operator(input : &String) -> bool {
     input == "+" ||
     input == "+=" ||
     input == "-" ||
-    input == "-="{
+    input == "-="||
+    input == "=" {
         return true;
     }
     return false;
@@ -78,7 +79,7 @@ fn is_keyword(input : &String) -> bool {
     return false;
 }
 
-fn is_primitive(input : &String) -> bool {
+pub fn is_primitive(input : &String) -> bool {
     if 
     input == "int" ||
     input == "float" ||
