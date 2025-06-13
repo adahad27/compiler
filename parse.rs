@@ -100,11 +100,6 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
         }
 
         NodeType::Primitive => {
-
-            /* 
-            We check if the current token has primitive_type, if so, then it is
-            the correct case and we can return.
-            */
             return parse_terminal(current_node, tokens, &token::TokenType::Primitive);
             
         }
@@ -120,110 +115,18 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
 
         NodeType::Body => {
 
-            while tokens[get_current_token_index()].val != "}".to_string(){
-                let mut stmt_node : Node = create_node(NodeType::Statement);
-                
-                if parse(&mut stmt_node, tokens)                 
-                {
-                    current_node.children.push(stmt_node);
-                }
-                else 
-                {
-                    return false;
-                }
-
-            }
-            return true;
+            return parse_body(current_node, tokens);
             
         }
 
         NodeType::Statement => {
-            
-            if tokens[get_current_token_index()].val == "return".to_string() {
-                let mut return_node : Node = create_node(NodeType::ReturnStatement);
-
-                if parse(&mut return_node, tokens) 
-                {
-                    current_node.children.push(return_node);
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            }
-            else if is_primitive(&tokens[get_current_token_index()].val) {
-                //Then we have found a variable declaration
-                let mut var_decl : Node = create_node(NodeType::VarDecl);
-
-                if parse(&mut var_decl, tokens) 
-                {
-                    current_node.children.push(var_decl);
-                    return true;
-                }
-                else {
-                    return false;
-                }
-                
-            }
-            return false;
+            return parse_statement(current_node, tokens);            
         }
         NodeType::VarDecl => {
-            let mut primitive_node : Node = create_node(NodeType::Primitive);
-            let mut identity_node : Node = create_node(NodeType::Identifier);
-
-            if 
-            parse(&mut primitive_node, tokens) && parse(&mut identity_node, tokens)
-            {
-                
-                current_node.children.push(primitive_node);
-                current_node.children.push(identity_node);
-                
-                let mut semicolon_node : Node = create_node(NodeType::Separator);
-                let mut operator_node : Node = create_node(NodeType::Operator);
-                let mut constant_node : Node = create_node(NodeType::Constant);
-
-                if parse(&mut semicolon_node, tokens)
-                {
-                    current_node.children.push(semicolon_node);
-                    current_node.value = "0".to_string();
-                    return true;
-                }
-                else if 
-                parse(&mut operator_node, tokens) &&
-                parse(&mut constant_node, tokens) &&
-                parse(&mut semicolon_node, tokens)
-                {
-                    current_node.children.push(operator_node);
-                    current_node.children.push(constant_node);
-                    current_node.children.push(semicolon_node);
-                    current_node.value = current_node.children[1].value.clone();
-                }
-                else {
-                    return false;
-                }
-                return true;
-            }
-
-            return false;
+            return parse_var_decl(current_node, tokens);
         }
         NodeType::ReturnStatement => {
-            let mut return_node : Node = create_node(NodeType::Keyword);
-            let mut constant_node : Node = create_node(NodeType::Constant);
-            let mut semicolon_node : Node = create_node(NodeType::Separator);
-
-            if 
-            parse(&mut return_node, tokens) &&
-            parse(&mut constant_node, tokens) &&
-            parse(&mut semicolon_node, tokens)
-            {
-                current_node.children.push(return_node);
-                current_node.children.push(constant_node);
-                current_node.children.push(semicolon_node);
-                return true;
-            }
-            else {
-                return false;
-            }
+            return parse_ret_stmt(current_node, tokens);
         }
         NodeType::Keyword => {
             return parse_terminal(current_node, tokens, &token::TokenType::Keyword);
@@ -311,6 +214,112 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<token::Token>, tok_typ
     
 }
 
-fn main() {
-    println!("Just for compliation");
+fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+
+    /* Include all rules for CFGs that have statements on the LHS here. */
+
+    if tokens[get_current_token_index()].val == "return".to_string() {
+        let mut return_node : Node = create_node(NodeType::ReturnStatement);
+
+        if parse(&mut return_node, tokens) 
+        {
+            current_node.children.push(return_node);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    else if is_primitive(&tokens[get_current_token_index()].val) {
+        //Then we have found a variable declaration
+        let mut var_decl : Node = create_node(NodeType::VarDecl);
+
+        if parse(&mut var_decl, tokens) 
+        {
+            current_node.children.push(var_decl);
+            return true;
+        }
+        else {
+            return false;
+        }
+        
+    }
+    return false;
+}
+
+fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+    let mut primitive_node : Node = create_node(NodeType::Primitive);
+    let mut identity_node : Node = create_node(NodeType::Identifier);
+
+    if 
+    parse(&mut primitive_node, tokens) && parse(&mut identity_node, tokens)
+    {
+        
+        current_node.children.push(primitive_node);
+        current_node.children.push(identity_node);
+        
+        let mut semicolon_node : Node = create_node(NodeType::Separator);
+        let mut operator_node : Node = create_node(NodeType::Operator);
+        let mut constant_node : Node = create_node(NodeType::Constant);
+
+        if parse(&mut semicolon_node, tokens)
+        {
+            current_node.children.push(semicolon_node);
+            current_node.value = "0".to_string();
+            return true;
+        }
+        else if 
+        parse(&mut operator_node, tokens) &&
+        parse(&mut constant_node, tokens) &&
+        parse(&mut semicolon_node, tokens)
+        {
+            current_node.children.push(operator_node);
+            current_node.children.push(constant_node);
+            current_node.children.push(semicolon_node);
+            current_node.value = current_node.children[1].value.clone();
+        }
+        else {
+            return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+    let mut return_node : Node = create_node(NodeType::Keyword);
+    let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut semicolon_node : Node = create_node(NodeType::Separator);
+
+    if 
+    parse(&mut return_node, tokens) &&
+    parse(&mut constant_node, tokens) &&
+    parse(&mut semicolon_node, tokens)
+    {
+        current_node.children.push(return_node);
+        current_node.children.push(constant_node);
+        current_node.children.push(semicolon_node);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+    while tokens[get_current_token_index()].val != "}".to_string(){
+        let mut stmt_node : Node = create_node(NodeType::Statement);
+        
+        if parse(&mut stmt_node, tokens)                 
+        {
+            current_node.children.push(stmt_node);
+        }
+        else 
+        {
+            return false;
+        }
+
+    }
+    return true;
 }
