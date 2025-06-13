@@ -6,7 +6,7 @@ the lexer/tokenizer. It implements the TokenType Enum, and the Token struct
 which will be used by the parser to implement parse trees.
 
 */
-
+#[derive(PartialEq, Eq)] 
 pub enum TokenType {
     Identifier,
     //Separators are (, ), {, }, ;
