@@ -2,24 +2,26 @@ use std::fs;
 mod token;
 mod parse;
 mod generation;
+
+use std::collections::HashMap;
 use crate::token::{lex_file, Token};
 use crate::generation::generate_code;
-use crate::parse::{parse, create_node, Node, NodeType};
+use crate::parse::{parse, create_node, Node, NodeType, Symbol, STManager};
+
 
 fn main() {
 
-    let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
+
+    let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), stack_ptr : 0};
     
-    // for tok in token_list {
-    //     println!("{}", tok.val);
-    // }
+    let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
 
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
-    if parse(&mut current_node, &token_list) {
+    if parse(&mut current_node, &token_list, &mut  symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        generate_code(&filename, &current_node);
+        generate_code(&filename, &current_node, &mut symbol_table);
     }
     else {
         println!("Sorry there was a parsing error!");

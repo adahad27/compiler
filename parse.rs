@@ -24,12 +24,23 @@ x   function declaration -> primitive identifier ();
     ret_stmt -> keyword constant ;
 */
 
-static mut CURRENT_TOKEN_INDEX : u32 = 0; 
-
-// mod token;
-
+use std::collections::HashMap;
 
 use crate::token::{self, is_primitive, TokenType};
+
+static mut CURRENT_TOKEN_INDEX : u32 = 0; 
+
+//This function returns the size of a primitive based on the declared type
+fn get_primitive_size(prim : &String) -> u32 {
+    let primitive : &str = prim.as_str();
+    match primitive {
+        "int" => 4,
+        "char" => 1,
+        "bool" => 1,
+        _ => 0
+    }
+}
+
 
 fn get_current_token_index() -> usize {
     unsafe {
@@ -51,6 +62,35 @@ fn prev_token_index() ->usize {
         CURRENT_TOKEN_INDEX -= 1;
         return CURRENT_TOKEN_INDEX as usize;
     }
+}
+
+pub struct Symbol {
+    pub primitive : String, 
+    pub addr : u32,
+    pub size : u32
+}
+
+pub struct STManager {
+    pub symbol_table : HashMap<String, Symbol>,
+    pub stack_ptr : u32
+}
+
+
+impl STManager {
+    /* Handles updating address for each local variable from base of stack frame
+    for easier assembly generation */
+    fn insert(&mut self, identifier : String, prim : String) {
+        //Construct symbol
+        self.symbol_table.insert(identifier, Symbol{primitive : prim.clone(), addr : self.stack_ptr, size : get_primitive_size(&prim)});
+
+        //Update stack pointer
+        self.stack_ptr += get_primitive_size(&prim);
+    }
+
+    fn query(&self, identifier : String) -> Option<&Symbol>{
+        return self.symbol_table.get(&identifier)
+    }
+
 }
 
 
@@ -87,16 +127,16 @@ pub fn create_node(n_type : NodeType) -> Node {
 
 
 
-pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
+pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool{
 
     match current_node.node_type {
 
         NodeType::Program_Start => {
-            return parse_start_node(current_node, tokens);
+            return parse_start_node(current_node, tokens, symbol_table);
         }
         
         NodeType::Function_Declaration => {
-            return parse_func_decl(current_node, tokens);
+            return parse_func_decl(current_node, tokens, symbol_table);
         }
 
         NodeType::Primitive => {
@@ -115,18 +155,18 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
 
         NodeType::Body => {
 
-            return parse_body(current_node, tokens);
+            return parse_body(current_node, tokens, symbol_table);
             
         }
 
         NodeType::Statement => {
-            return parse_statement(current_node, tokens);            
+            return parse_statement(current_node, tokens, symbol_table);            
         }
         NodeType::VarDecl => {
-            return parse_var_decl(current_node, tokens);
+            return parse_var_decl(current_node, tokens, symbol_table);
         }
         NodeType::ReturnStatement => {
-            return parse_ret_stmt(current_node, tokens);
+            return parse_ret_stmt(current_node, tokens, symbol_table);
         }
         NodeType::Keyword => {
             return parse_terminal(current_node, tokens, &token::TokenType::Keyword);
@@ -144,7 +184,7 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool{
 
 }
 
-fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>) -> bool {
+fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool {
     //Create a new node of type function declaration            
             let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
 
@@ -155,7 +195,7 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>) -> bo
             must backtrack.
             */
 
-            if parse(&mut function_declaration_node, tokens) {
+            if parse(&mut function_declaration_node, tokens, symbol_table) {
                 current_node.children.push(function_declaration_node);
                 return true;
             }
@@ -164,7 +204,7 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>) -> bo
             }
 }
 
-fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
@@ -180,13 +220,13 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool
     */
 
     if 
-    parse(&mut primitive_node, tokens) &&
-    parse(&mut identifier_node, tokens) &&
-    parse(&mut open_paren_node, tokens) &&
-    parse(&mut close_paren_node, tokens) &&
-    parse(&mut open_curly_node, tokens) &&
-    parse(&mut body_node, tokens) &&
-    parse(&mut close_curly_node, tokens)
+    parse(&mut primitive_node, tokens, symbol_table) &&
+    parse(&mut identifier_node, tokens, symbol_table) &&
+    parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut close_paren_node, tokens, symbol_table) &&
+    parse(&mut open_curly_node, tokens, symbol_table) &&
+    parse(&mut body_node, tokens, symbol_table) &&
+    parse(&mut close_curly_node, tokens, symbol_table)
     {
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
@@ -214,14 +254,14 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<token::Token>, tok_typ
     
 }
 
-fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
 
     /* Include all rules for CFGs that have statements on the LHS here. */
 
     if tokens[get_current_token_index()].val == "return".to_string() {
         let mut return_node : Node = create_node(NodeType::ReturnStatement);
 
-        if parse(&mut return_node, tokens) 
+        if parse(&mut return_node, tokens, symbol_table) 
         {
             current_node.children.push(return_node);
             return true;
@@ -234,7 +274,7 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool
         //Then we have found a variable declaration
         let mut var_decl : Node = create_node(NodeType::VarDecl);
 
-        if parse(&mut var_decl, tokens) 
+        if parse(&mut var_decl, tokens, symbol_table) 
         {
             current_node.children.push(var_decl);
             return true;
@@ -247,12 +287,12 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool
     return false;
 }
 
-fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identity_node : Node = create_node(NodeType::Identifier);
 
     if 
-    parse(&mut primitive_node, tokens) && parse(&mut identity_node, tokens)
+    parse(&mut primitive_node, tokens, symbol_table) && parse(&mut identity_node, tokens, symbol_table)
     {
         
         current_node.children.push(primitive_node);
@@ -262,21 +302,21 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool 
         let mut operator_node : Node = create_node(NodeType::Operator);
         let mut constant_node : Node = create_node(NodeType::Constant);
 
-        if parse(&mut semicolon_node, tokens)
+        if parse(&mut semicolon_node, tokens, symbol_table)
         {
             current_node.children.push(semicolon_node);
             current_node.value = "0".to_string();
             return true;
         }
         else if 
-        parse(&mut operator_node, tokens) &&
-        parse(&mut constant_node, tokens) &&
-        parse(&mut semicolon_node, tokens)
+        parse(&mut operator_node, tokens, symbol_table) &&
+        parse(&mut constant_node, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table)
         {
             current_node.children.push(operator_node);
             current_node.children.push(constant_node);
             current_node.children.push(semicolon_node);
-            current_node.value = current_node.children[1].value.clone();
+            current_node.value = current_node.children[3].value.clone();
         }
         else {
             return false;
@@ -287,15 +327,15 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool 
     return false;
 }
 
-fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
     let mut constant_node : Node = create_node(NodeType::Constant);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
 
     if 
-    parse(&mut return_node, tokens) &&
-    parse(&mut constant_node, tokens) &&
-    parse(&mut semicolon_node, tokens)
+    parse(&mut return_node, tokens, symbol_table) &&
+    parse(&mut constant_node, tokens, symbol_table) &&
+    parse(&mut semicolon_node, tokens, symbol_table)
     {
         current_node.children.push(return_node);
         current_node.children.push(constant_node);
@@ -307,11 +347,11 @@ fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool 
     }
 }
 
-fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>) ->bool {
+fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
         
-        if parse(&mut stmt_node, tokens)                 
+        if parse(&mut stmt_node, tokens, symbol_table)                 
         {
             current_node.children.push(stmt_node);
         }
