@@ -7,7 +7,6 @@ logic
 use std::fs;
 
 use crate::parse::{Node, NodeType, STManager};
-use std::collections::HashMap;
 
 pub fn generate_code(filename : &String, mut parse_tree : &Node, symbol_table : &mut STManager) {
     let mut program_string : String = "".to_string();
@@ -71,7 +70,10 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             2.) Push variable onto stack
             3.) Update symbol table
             */
-            program_string.push_str(format!("\tsub rsp, 8\n\tpush {}", parse_tree.value).as_str());
+            if let Option::Some(query_value) = symbol_table.query(&parse_tree.children[1].value) {
+                program_string.push_str(format!("\tsub rsp, {}\n\tpush {}\n", &query_value.size, &parse_tree.value).as_str());
+            }
+            
             
 
 

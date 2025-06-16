@@ -79,16 +79,16 @@ pub struct STManager {
 impl STManager {
     /* Handles updating address for each local variable from base of stack frame
     for easier assembly generation */
-    fn insert(&mut self, identifier : String, prim : String) {
+    fn insert(&mut self, identifier : &String, prim : &String) {
         //Construct symbol
-        self.symbol_table.insert(identifier, Symbol{primitive : prim.clone(), addr : self.stack_ptr, size : get_primitive_size(&prim)});
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.stack_ptr, size : get_primitive_size(&prim)});
 
         //Update stack pointer
         self.stack_ptr += get_primitive_size(&prim);
     }
 
-    fn query(&self, identifier : String) -> Option<&Symbol>{
-        return self.symbol_table.get(&identifier)
+    pub fn query(&self, identifier : &String) -> Option<&Symbol>{
+        return self.symbol_table.get(identifier)
     }
 
 }
@@ -302,10 +302,12 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_
         let mut operator_node : Node = create_node(NodeType::Operator);
         let mut constant_node : Node = create_node(NodeType::Constant);
 
+
         if parse(&mut semicolon_node, tokens, symbol_table)
         {
             current_node.children.push(semicolon_node);
             current_node.value = "0".to_string();
+            symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
             return true;
         }
         else if 
@@ -317,6 +319,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_
             current_node.children.push(constant_node);
             current_node.children.push(semicolon_node);
             current_node.value = current_node.children[3].value.clone();
+            symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
         }
         else {
             return false;
