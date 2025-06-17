@@ -1,12 +1,12 @@
 use std::fs;
-mod token;
-mod parse;
-mod generation;
+mod token_c;
+mod parse_c;
+mod generation_c;
 
 use std::collections::HashMap;
-use crate::token::{lex_file, Token};
-use crate::generation::generate_code;
-use crate::parse::{parse, create_node, Node, NodeType, Symbol, STManager};
+use crate::token_c::{lex_file, Token};
+use crate::generation_c::generate_code;
+use crate::parse_c::{parse, create_node, Node, NodeType, Symbol, STManager};
 
 
 fn main() {

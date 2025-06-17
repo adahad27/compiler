@@ -6,7 +6,7 @@ logic
 
 use std::fs;
 
-use crate::parse::{Node, NodeType, STManager};
+use crate::parse_c::{Node, NodeType, STManager};
 
 pub fn generate_code(filename : &String, mut parse_tree : &Node, symbol_table : &mut STManager) {
     let mut program_string : String = "".to_string();

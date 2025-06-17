@@ -30,7 +30,7 @@ x   function declaration -> primitive identifier ();
 
 use std::collections::HashMap;
 
-use crate::token::{self, is_operator, is_primitive, is_separator, TokenType};
+use crate::token_c::{self, is_operator, is_primitive, is_separator, TokenType};
 
 static mut CURRENT_TOKEN_INDEX : u32 = 0; 
 
@@ -139,7 +139,7 @@ pub fn create_node(n_type : NodeType) -> Node {
 
 
 
-pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool{
+pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool{
 
     match current_node.node_type {
 
@@ -152,15 +152,15 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table
         }
 
         NodeType::Primitive => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Primitive);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Primitive);
         }
 
         NodeType::Identifier => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Identifier);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Identifier);
         }
 
         NodeType::Separator => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Separator);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Separator);
         }
 
         NodeType::Body => {
@@ -179,13 +179,13 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table
             return parse_ret_stmt(current_node, tokens, symbol_table);
         }
         NodeType::Keyword => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Keyword);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Keyword);
         }
         NodeType::Operator => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Operator);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Operator);
         }
         NodeType::Constant => {
-            return parse_terminal(current_node, tokens, &token::TokenType::Constant);
+            return parse_terminal(current_node, tokens, &token_c::TokenType::Constant);
         }
 
 
@@ -194,7 +194,7 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table
 
 }
 
-fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_start_node(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     //Create a new node of type function declaration            
             let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
 
@@ -214,7 +214,7 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<token::Token>, symbo
             }
 }
 
-fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
+fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
@@ -253,7 +253,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol
     }
 }
 
-fn parse_terminal(current_node : &mut Node, tokens : &Vec<token::Token>, tok_type : &TokenType) -> bool {
+fn parse_terminal(current_node : &mut Node, tokens : &Vec<token_c::Token>, tok_type : &TokenType) -> bool {
 
     if tok_type == &tokens[get_current_token_index()].token_type {
         current_node.value = (&tokens[get_current_token_index()].val).clone();
@@ -264,7 +264,7 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<token::Token>, tok_typ
     
 }
 
-fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
+fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
 
     /* Include all rules for CFGs that have statements on the LHS here. */
 
@@ -297,7 +297,7 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token::Token>, symbol
     return false;
 }
 
-fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
+fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identity_node : Node = create_node(NodeType::Identifier);
 
@@ -340,44 +340,33 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_
     return false;
 }
 
-fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
+fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
-    let mut constant_node : Node = create_node(NodeType::Constant);
-    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut expression_node : Node = create_node(NodeType::Expression);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
 
-    if parse(&mut return_node, tokens, symbol_table) {
-        if 
-        parse(&mut constant_node, tokens, symbol_table) &&
-        parse(&mut semicolon_node, tokens, symbol_table) {
-            current_node.children.push(return_node);
-            current_node.children.push(constant_node);
-            current_node.value = current_node.children[1].value.clone();
-            current_node.children.push(semicolon_node);
-            return true;
-        }
-        else if 
-        parse(&mut identifier_node, tokens, symbol_table) &&
-        parse(&mut semicolon_node, tokens, symbol_table) {
-            current_node.children.push(return_node);
-            current_node.children.push(identifier_node);
-            current_node.value = current_node.children[1].value.clone();
-            current_node.children.push(semicolon_node);
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-    else {
-        return false;
-    }
 
 
+    if
+    parse(&mut return_node, tokens, symbol_table) &&
+    parse(&mut expression_node, tokens, symbol_table) &&
+    parse(&mut semicolon_node, tokens, symbol_table) {
+        
+        current_node.children.push(return_node);
+        current_node.children.push(expression_node);
+        current_node.value = current_node.children[1].value.clone();
+        current_node.children.push(semicolon_node);
+
+        return true;
+    }
+
+    return false;
+
+    
    
 }
 
-fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
+fn parse_body(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
         
@@ -394,7 +383,7 @@ fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_tabl
     return true;
 }
 
-fn parse_expression(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
 
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut constant_node : Node = create_node(NodeType::Constant);
@@ -410,9 +399,9 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token::Token>, symbo
         let mut operator_node : Node = create_node(NodeType::Operator);
 
         if is_separator(&tokens[token_lookahead()].val) {
-
+            
             current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-
+            current_node.value = current_node.children[0].value.clone();
             return true;
         }
         else if is_operator(&tokens[token_lookahead()].val) {
