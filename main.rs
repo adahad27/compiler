@@ -4,7 +4,7 @@ mod parse_c;
 mod generation_c;
 
 use std::collections::HashMap;
-use crate::token_c::{lex_file, Token};
+use crate::token_c::{lex_file, Token, print_tokens};
 use crate::generation_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType, Symbol, STManager};
 
@@ -15,6 +15,8 @@ fn main() {
     let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), stack_ptr : 0};
     
     let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
+
+    // print_tokens(&token_list);
 
     let mut current_node : Node = create_node(NodeType::Program_Start);
 

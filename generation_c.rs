@@ -45,12 +45,14 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             2.) Push variable onto stack
             3.) Update symbol table
             */
-            if let Option::Some(query_value) = symbol_table.query(&parse_tree.children[1].value) {
-                program_string.push_str(format!("\tpush {}\n", &parse_tree.value).as_str());
-            }
+            
             
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
+            }
+            
+            if let Option::Some(query_value) = symbol_table.query(&parse_tree.children[1].value) {
+                program_string.push_str(format!("\tpush {}\n", &parse_tree.value).as_str());
             }
         }
         NodeType::ReturnStatement => {

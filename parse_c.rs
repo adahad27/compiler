@@ -300,41 +300,41 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
 fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identity_node : Node = create_node(NodeType::Identifier);
-
     if 
     parse(&mut primitive_node, tokens, symbol_table) && parse(&mut identity_node, tokens, symbol_table)
     {
-        
         current_node.children.push(primitive_node);
         current_node.children.push(identity_node);
         
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         let mut operator_node : Node = create_node(NodeType::Operator);
         let mut constant_node : Node = create_node(NodeType::Constant);
+        let mut expression_node : Node = create_node(NodeType::Expression);
 
-
-        if parse(&mut semicolon_node, tokens, symbol_table)
-        {
+        if is_separator(&tokens[get_current_token_index()].val) {
+            parse(&mut semicolon_node, tokens, symbol_table);
             current_node.children.push(semicolon_node);
-            current_node.value = "0".to_string();
             symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
+            current_node.value = "0".to_string();
             return true;
         }
-        else if 
-        parse(&mut operator_node, tokens, symbol_table) &&
-        parse(&mut constant_node, tokens, symbol_table) &&
-        parse(&mut semicolon_node, tokens, symbol_table)
-        {
+        else if is_operator(&tokens[get_current_token_index()].val) {
+
+            parse(&mut operator_node, tokens, symbol_table);
+            parse(&mut expression_node, tokens, symbol_table);
+            parse(&mut semicolon_node, tokens, symbol_table);
+
             current_node.children.push(operator_node);
-            current_node.children.push(constant_node);
+            current_node.children.push(expression_node);
             current_node.children.push(semicolon_node);
+
             current_node.value = current_node.children[3].value.clone();
             symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
+            return true;
+
         }
-        else {
-            return false;
-        }
-        return true;
+        return false;
+
     }
 
     return false;
@@ -387,7 +387,6 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
 
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut constant_node : Node = create_node(NodeType::Constant);
-    
 
     let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
     let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
@@ -398,13 +397,13 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
         // let mut semicolon_node : Node = create_node(NodeType::Separator);
         let mut operator_node : Node = create_node(NodeType::Operator);
 
-        if is_separator(&tokens[token_lookahead()].val) {
+        if is_separator(&tokens[get_current_token_index()].val) {
             
             current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
             current_node.value = current_node.children[0].value.clone();
             return true;
         }
-        else if is_operator(&tokens[token_lookahead()].val) {
+        else if is_operator(&tokens[get_current_token_index()].val) {
             parse(&mut operator_node, tokens, symbol_table);
             let mut expression_node = create_node(NodeType::Expression);
             if parse(&mut expression_node, tokens, symbol_table) {
