@@ -20,8 +20,12 @@ x   function declaration -> primitive identifier ();
     var_decl -> primitive identifier;
     var_decl -> primitive idenitifer = constant;
 
+
+    expression -> expression + expression ;
+    expression -> constant | identifier ;
+
     statement -> ret_stmt
-    ret_stmt -> keyword constant ;
+    ret_stmt -> keyword constant | identifier ;
 */
 
 use std::collections::HashMap;
@@ -333,21 +337,38 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_
 fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
     let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
 
-    if 
-    parse(&mut return_node, tokens, symbol_table) &&
-    parse(&mut constant_node, tokens, symbol_table) &&
-    parse(&mut semicolon_node, tokens, symbol_table)
-    {
-        current_node.children.push(return_node);
-        current_node.children.push(constant_node);
-        current_node.children.push(semicolon_node);
-        return true;
+    if parse(&mut return_node, tokens, symbol_table) {
+        if 
+        parse(&mut constant_node, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table) {
+            current_node.children.push(return_node);
+            current_node.children.push(constant_node);
+            current_node.value = current_node.children[1].value.clone();
+            current_node.children.push(semicolon_node);
+            return true;
+        }
+        else if 
+        parse(&mut identifier_node, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table) {
+            current_node.children.push(return_node);
+            current_node.children.push(identifier_node);
+            current_node.value = current_node.children[1].value.clone();
+            current_node.children.push(semicolon_node);
+            return true;
+        }
+        else {
+            return false;
+        }
     }
     else {
         return false;
     }
+
+
+   
 }
 
 fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) ->bool {

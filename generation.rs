@@ -29,25 +29,21 @@ fn generate_start_stub(program_string : &mut String) {
 fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symbol_table : &mut STManager) {
     match parse_tree.node_type {
         NodeType::Program_Start => {
-            println!("Program_Start Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
         }
         NodeType::Function_Declaration => {
-            println!("Function_Declaration Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
         }
         NodeType::Primitive => {
-            println!("Primitive Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
         }
         NodeType::Identifier => {
-            println!("Identifier Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
@@ -58,13 +54,11 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             }
         }
         NodeType::Body => {
-            println!("Body Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
         }
         NodeType::VarDecl => {
-            println!("VarDecl Node encountered with value {}", parse_tree.value);
             /* 
             1.) Subtract stack pointer by size
             2.) Push variable onto stack
@@ -82,7 +76,6 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             }
         }
         NodeType::Statement => {
-            println!("Statement Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
@@ -93,12 +86,23 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             }
         }
         NodeType::ReturnStatement => {
-            // generate_from_tree(program_string, &mut parse_tree.children[1]);
-            println!("ReturnStatement Node encountered");
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
-            program_string.push_str(format!("\tmov rdi, {}\n", parse_tree.children[1].value).as_str());
+            if parse_tree.children[1].value.chars().nth(0).unwrap().is_alphabetic() {
+                //Then we have an identifier
+                //We must perform a lookup to get the value
+                let mut offset : i32 = symbol_table.query(&parse_tree.children[1].value).unwrap().addr.clone() as i32;
+                let size : i32 = symbol_table.query(&parse_tree.children[1].value).unwrap().size.clone() as i32;
+                offset += size;
+
+                program_string.push_str(format!("\tmov rdi, [rbp-{}]\n", offset).as_str());
+            }
+            else {
+                //Then we have an actual number
+                program_string.push_str(format!("\tmov rdi, {}\n", parse_tree.children[1].value).as_str());
+            }
+            
         }
         NodeType::Keyword => {
             for node in &parse_tree.children {
