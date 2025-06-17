@@ -34,6 +34,7 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             }
         }
         NodeType::Function_Declaration => {
+            program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
@@ -65,7 +66,7 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             3.) Update symbol table
             */
             if let Option::Some(query_value) = symbol_table.query(&parse_tree.children[1].value) {
-                program_string.push_str(format!("\tsub rsp, {}\n\tpush {}\n", &query_value.size, &parse_tree.value).as_str());
+                program_string.push_str(format!("\tpush {}\n", &parse_tree.value).as_str());
             }
             
             
@@ -95,7 +96,6 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
                 let mut offset : i32 = symbol_table.query(&parse_tree.children[1].value).unwrap().addr.clone() as i32;
                 let size : i32 = symbol_table.query(&parse_tree.children[1].value).unwrap().size.clone() as i32;
                 offset += size;
-
                 program_string.push_str(format!("\tmov rdi, [rbp-{}]\n", offset).as_str());
             }
             else {

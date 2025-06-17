@@ -38,9 +38,10 @@ static mut CURRENT_TOKEN_INDEX : u32 = 0;
 fn get_primitive_size(prim : &String) -> u32 {
     let primitive : &str = prim.as_str();
     match primitive {
-        "int" => 4,
-        "char" => 1,
-        "bool" => 1,
+        //For now we make them all take up a register's worth of space
+        "int" => 8,
+        "char" => 8,
+        "bool" => 8,
         _ => 0
     }
 }
