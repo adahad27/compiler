@@ -54,7 +54,7 @@ pub fn is_operator(input : &String) -> bool {
     return false;
 }
 
-fn is_separator(input : &String) -> bool {
+pub fn is_separator(input : &String) -> bool {
     if
     input == "(" || 
     input == ")" || 

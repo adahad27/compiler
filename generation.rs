@@ -28,33 +28,13 @@ fn generate_start_stub(program_string : &mut String) {
 
 fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symbol_table : &mut STManager) {
     match parse_tree.node_type {
-        NodeType::Program_Start => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
         NodeType::Function_Declaration => {
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
         }
-        NodeType::Primitive => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Identifier => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Separator => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Body => {
+        NodeType::Expression => {
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
@@ -69,19 +49,6 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
                 program_string.push_str(format!("\tpush {}\n", &parse_tree.value).as_str());
             }
             
-            
-
-
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Statement => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Operator => {
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }
@@ -104,12 +71,7 @@ fn generate_from_tree(program_string : &mut String, mut parse_tree : &Node, symb
             }
             
         }
-        NodeType::Keyword => {
-            for node in &parse_tree.children {
-                generate_from_tree(program_string, node, symbol_table);
-            }
-        }
-        NodeType::Constant => {
+        _ => {
             for node in &parse_tree.children {
                 generate_from_tree(program_string, node, symbol_table);
             }

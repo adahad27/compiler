@@ -18,19 +18,19 @@ x   function declaration -> primitive identifier ();
 
     statement -> var_decl
     var_decl -> primitive identifier;
-    var_decl -> primitive idenitifer = constant;
+    var_decl -> primitive idenitifer = expression;
 
 
-    expression -> expression + expression ;
-    expression -> constant | identifier ;
+    expression -> constant | identifier + expression
+    expression -> constant | identifier
 
     statement -> ret_stmt
-    ret_stmt -> keyword constant | identifier ;
+    ret_stmt -> keyword expression ;
 */
 
 use std::collections::HashMap;
 
-use crate::token::{self, is_primitive, TokenType};
+use crate::token::{self, is_operator, is_primitive, is_separator, TokenType};
 
 static mut CURRENT_TOKEN_INDEX : u32 = 0; 
 
@@ -52,6 +52,12 @@ fn get_current_token_index() -> usize {
         return CURRENT_TOKEN_INDEX as usize;
     }
     
+}
+
+fn token_lookahead() -> usize {
+    unsafe {
+        return (CURRENT_TOKEN_INDEX + 1) as usize;
+    }
 }
 
 fn next_token_index() -> usize {
@@ -107,6 +113,7 @@ pub enum NodeType {
     Primitive,
     Identifier,
     Body,
+    Expression,
     Statement,
     ReturnStatement,
     VarDecl,
@@ -146,11 +153,9 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table
 
         NodeType::Primitive => {
             return parse_terminal(current_node, tokens, &token::TokenType::Primitive);
-            
         }
 
         NodeType::Identifier => {
-
             return parse_terminal(current_node, tokens, &token::TokenType::Identifier);
         }
 
@@ -159,11 +164,11 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table
         }
 
         NodeType::Body => {
-
             return parse_body(current_node, tokens, symbol_table);
-            
         }
-
+        NodeType::Expression => {
+            return parse_expression(current_node, tokens, symbol_table)
+        }
         NodeType::Statement => {
             return parse_statement(current_node, tokens, symbol_table);            
         }
@@ -387,4 +392,51 @@ fn parse_body(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_tabl
 
     }
     return true;
+}
+
+fn parse_expression(current_node : &mut Node, tokens : &Vec<token::Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut constant_node : Node = create_node(NodeType::Constant);
+    
+
+    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
+    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
+
+    //We want the first token to be an identifier XOR constant
+    if identifier_parse != constant_parse{
+
+        // let mut semicolon_node : Node = create_node(NodeType::Separator);
+        let mut operator_node : Node = create_node(NodeType::Operator);
+
+        if is_separator(&tokens[token_lookahead()].val) {
+
+            current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
+
+            return true;
+        }
+        else if is_operator(&tokens[token_lookahead()].val) {
+            parse(&mut operator_node, tokens, symbol_table);
+            let mut expression_node = create_node(NodeType::Expression);
+            if parse(&mut expression_node, tokens, symbol_table) {
+
+                current_node.value = format!("{} {} {}", (if identifier_parse {identifier_node} else {constant_node}).value, operator_node.value, expression_node.value).to_string();
+                
+                current_node.children.push(operator_node);
+                current_node.children.push(expression_node);
+
+                
+
+                return true;
+            }
+            return false;
+
+        }
+        return false;
+
+    } 
+    
+
+
+    return false;
 }
