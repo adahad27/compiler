@@ -23,7 +23,7 @@ fn main() {
     if parse(&mut current_node, &token_list, &mut  symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        generate_code(&filename, &current_node, &mut symbol_table);
+        generate_code(&filename, &mut current_node, &mut symbol_table);
     }
     else {
         println!("Sorry there was a parsing error!");

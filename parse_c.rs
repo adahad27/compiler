@@ -122,7 +122,6 @@ pub enum NodeType {
     Operator,
     Separator
 }
-
 pub struct Node {
     pub node_type : NodeType,
     pub children : Vec<Node>,
@@ -308,7 +307,6 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         let mut operator_node : Node = create_node(NodeType::Operator);
-        let mut constant_node : Node = create_node(NodeType::Constant);
         let mut expression_node : Node = create_node(NodeType::Expression);
 
         if is_separator(&tokens[get_current_token_index()].val) {
