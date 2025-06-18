@@ -8,6 +8,8 @@ use std::fs;
 
 use crate::parse_c::{Node, NodeType, STManager};
 
+static mut CURRENT_LABEL_INDEX : u32 = 0;
+
 pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : &mut STManager) {
     let mut program_string : String = "".to_string();
 
@@ -163,4 +165,15 @@ impl RegisterManager {
         return self.register_list[reg_index as usize].name.clone();
     }
 
+}
+
+fn label_create() -> u32 {
+    unsafe {
+        CURRENT_LABEL_INDEX += 1;
+        return CURRENT_LABEL_INDEX;
+    }
+}
+
+fn label_name(index : u32)->String {
+    return format!(".L{}", index);
 }
