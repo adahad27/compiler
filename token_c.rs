@@ -54,6 +54,10 @@ pub fn is_operator(input : &String) -> bool {
     return false;
 }
 
+pub fn is_identifier(input : &String) -> bool {
+    return input.chars().nth(0).unwrap().is_alphabetic();
+}
+
 pub fn is_separator(input : &String) -> bool {
     if
     input == "(" || 

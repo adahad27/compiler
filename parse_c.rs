@@ -18,8 +18,8 @@ x   function declaration -> primitive identifier ();
 
     statement -> var_decl
     var_decl -> primitive identifier;
-    var_decl -> primitive idenitifer = expression;
-
+    var_decl -> primitive idenitifer = expression ;
+    var_decl -> identifier = expression ;
 
     expression -> constant | identifier + expression
     expression -> constant | identifier
@@ -30,7 +30,7 @@ x   function declaration -> primitive identifier ();
 
 use std::collections::HashMap;
 
-use crate::token_c::{self, is_operator, is_primitive, is_separator, TokenType};
+use crate::token_c::{self, is_identifier, is_operator, is_primitive, is_separator, TokenType};
 
 static mut CURRENT_TOKEN_INDEX : u32 = 0; 
 
@@ -83,7 +83,7 @@ pub struct Symbol {
 
 pub struct STManager {
     pub symbol_table : HashMap<String, Symbol>,
-    pub stack_ptr : u32
+    pub ordinal : u32
 }
 
 
@@ -92,10 +92,10 @@ impl STManager {
     for easier assembly generation */
     fn insert(&mut self, identifier : &String, prim : &String) {
         //Construct symbol
-        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.stack_ptr, size : get_primitive_size(&prim)});
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim)});
 
         //Update stack pointer
-        self.stack_ptr += get_primitive_size(&prim);
+        self.ordinal += 1;
     }
 
     pub fn query(&self, identifier : &String) -> Option<&Symbol>{
@@ -125,14 +125,16 @@ pub enum NodeType {
 pub struct Node {
     pub node_type : NodeType,
     pub children : Vec<Node>,
-    pub value : String
+    pub properties : HashMap<String, String>,
+    pub register : i32 //-1 implies that there is no register assigned
 }
 
 pub fn create_node(n_type : NodeType) -> Node {
     return Node {
         node_type : n_type,
         children : Vec::new(),
-        value : "".to_string()
+        properties : HashMap::new(),
+        register : -1
     };
 } 
 
@@ -255,7 +257,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
 fn parse_terminal(current_node : &mut Node, tokens : &Vec<token_c::Token>, tok_type : &TokenType) -> bool {
 
     if tok_type == &tokens[get_current_token_index()].token_type {
-        current_node.value = (&tokens[get_current_token_index()].val).clone();
+        current_node.properties.insert("value".to_string(), (&tokens[get_current_token_index()].val).clone());
         next_token_index();
         return true;
     }
@@ -279,7 +281,9 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
             return false;
         }
     }
-    else if is_primitive(&tokens[get_current_token_index()].val) {
+    else if 
+    is_primitive(&tokens[get_current_token_index()].val) ||
+    is_identifier(&tokens[get_current_token_index()].val) {
         //Then we have found a variable declaration
         let mut var_decl : Node = create_node(NodeType::VarDecl);
 
@@ -312,8 +316,11 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         if is_separator(&tokens[get_current_token_index()].val) {
             parse(&mut semicolon_node, tokens, symbol_table);
             current_node.children.push(semicolon_node);
-            symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
-            current_node.value = "0".to_string();
+            
+            current_node.properties.insert("value".to_string(), "0".to_string());
+            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
+            
+            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
             return true;
         }
         else if is_operator(&tokens[get_current_token_index()].val) {
@@ -326,13 +333,33 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(expression_node);
             current_node.children.push(semicolon_node);
 
-            current_node.value = current_node.children[3].value.clone();
-            symbol_table.insert(&current_node.children[1].value, &current_node.children[0].value);
+            current_node.properties.insert("value".to_string(), current_node.children[3].properties["terminal"].clone());
+            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
+            
+            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
             return true;
 
         }
         return false;
 
+    }
+    else if parse(&mut identity_node, tokens, symbol_table) {
+        let mut operator_node : Node = create_node(NodeType::Operator);
+        let mut expression_node : Node = create_node(NodeType::Expression);
+        let mut semicolon_node : Node = create_node(NodeType::Separator);
+
+        if
+        parse(&mut operator_node, tokens, symbol_table) &&
+        parse(&mut expression_node, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table) {
+            
+            current_node.children.push(identity_node);
+            current_node.children.push(operator_node);
+            current_node.children.push(expression_node);
+            current_node.children.push(semicolon_node);
+
+            return true;
+        }
     }
 
     return false;
@@ -352,7 +379,6 @@ fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         
         current_node.children.push(return_node);
         current_node.children.push(expression_node);
-        current_node.value = current_node.children[1].value.clone();
         current_node.children.push(semicolon_node);
 
         return true;
@@ -392,13 +418,15 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
     //We want the first token to be an identifier XOR constant
     if identifier_parse != constant_parse{
 
-        // let mut semicolon_node : Node = create_node(NodeType::Separator);
+        
         let mut operator_node : Node = create_node(NodeType::Operator);
 
         if is_separator(&tokens[get_current_token_index()].val) {
-            
+
+            //Set the terminal property of an expression iff the expression evaluates to a terminal
+            current_node.properties.insert("terminal".to_string(), if identifier_parse {identifier_node.properties["value"].clone()} else {constant_node.properties["value"].clone()});
             current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-            current_node.value = current_node.children[0].value.clone();
+            
             return true;
         }
         else if is_operator(&tokens[get_current_token_index()].val) {
@@ -406,7 +434,7 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
             let mut expression_node = create_node(NodeType::Expression);
             if parse(&mut expression_node, tokens, symbol_table) {
 
-                current_node.value = format!("{} {} {}", (if identifier_parse {identifier_node} else {constant_node}).value, operator_node.value, expression_node.value).to_string();
+                
                 
                 current_node.children.push(operator_node);
                 current_node.children.push(expression_node);

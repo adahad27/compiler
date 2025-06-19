@@ -12,7 +12,7 @@ use crate::parse_c::{parse, create_node, Node, NodeType, Symbol, STManager};
 fn main() {
 
 
-    let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), stack_ptr : 0};
+    let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), ordinal : 1};
     
     let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
 
