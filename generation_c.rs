@@ -42,24 +42,25 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);
 
-            if parse_tree.children.len() > 1 {
-                //This is an expression with an operator
+            if !parse_tree.properties.contains_key("operator") {
+                //Allocate a register
+                let register_number : u32 = register_manager.register_alloc().unwrap();
+                
+                let register_name : String = register_manager.register_name(register_number);
+
+                let operand : String = 
+                if is_identifier(&parse_tree.properties["terminal"]) {
+                    symbol_table.modify_register(&parse_tree.properties["terminal"], register_number as i32);
+                    format!("[rbp-{}]", symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr)
+                } 
+                else {
+                    parse_tree.properties["terminal"].clone()
+                };
+
+                //Move value into allocated register
+                program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
             }
             else {
-                /* This is an expression without an operator, so it must be an identifier or a constant.
-                If identifier, we query for the address and move into first available register.
-                If constant, we take value of the constant and move into first available register. */
-
-                let available_register : u32 = register_manager.register_alloc().unwrap();
-                parse_tree.register = available_register as i32;
-
-                
-
-                // program_string.push_str(
-                //     format!("\tmov {}, {}\n", 
-                //     register_manager.register_name(available_register), 
-                //     if is_identifier(&parse_tree.value) {"".to_string()} else {parse_tree.value.clone()}).as_str()
-                // );                
 
             }
             
@@ -86,8 +87,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let operand : String = parse_tree.properties["value"].clone();
 
                 if is_identifier(&operand) {
-                    program_string.push_str(format!("\tmov rax, [rbp-{}]\n", symbol_table.query(&operand).unwrap().addr).as_str());
-                    program_string.push_str(format!("\tmov [rbp-{}], rax\n", offset).as_str());
+                    // program_string.push_str(format!("\tmov rax, [rbp{}]\n", symbol_table.query(&operand).unwrap().addr).as_str());
+                    program_string.push_str(format!("\tmov [rbp-{}], {}\n", offset, symbol_table.query(&operand).unwrap().register).as_str());
+
+                    //Free up register and deassociate it from the variable
+                    // register_manager.register_free(symbol_table.query(&operand).unwrap().register as u32);
+                    // symbol_table.modify_register(&operand, -1);
+                    
                 }
                 else {
                     program_string.push_str(format!("\tmov dword [rbp-{}], {}\n", offset, operand).as_str());
@@ -107,9 +113,18 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             if parse_tree.children[1].properties.contains_key("terminal") {
                 if is_identifier(&parse_tree.children[1].properties["terminal"]) {
                     //Then we have an identifier
+                    
                     //We must perform a lookup to get the value
-                    let offset : i32 = symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().addr.clone() as i32;
-                    program_string.push_str(format!("\tmov rdi, [rbp-{}]\n", offset).as_str());
+                    if symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().register == -1 {
+                        let offset : i32 = symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().addr.clone() as i32;
+                        program_string.push_str(format!("\tmov rdi, [rbp-{}]\n", offset).as_str());
+                    }
+                    else {
+                        let register_number : i32 = symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().register;
+                        let register_name : String = register_manager.register_name(register_number as u32);
+                        program_string.push_str(format!("\tmov rdi, {}\n", register_name).as_str());
+                    }
+                    
                 }
                 else {
                     //Then we have an actual number

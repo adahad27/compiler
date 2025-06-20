@@ -3,10 +3,9 @@ _start:
 	push rbp
 	mov rbp, rsp
 	push 0
-	mov dword [rbp-8], 3
-	mov dword [rbp-8], 5
-	push 0
-	mov dword [rbp-16], 4
-	mov rdi, [rbp-16]
+	mov rbx, 4
+	mov dword [rbp-8], 4
+	mov r10, [rbp-8]
+	mov rdi, r10
 	mov rax, 60
 	syscall

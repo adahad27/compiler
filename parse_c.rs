@@ -21,6 +21,7 @@ x   function declaration -> primitive identifier ();
     var_decl -> primitive idenitifer = expression ;
     var_decl -> identifier = expression ;
 
+x   expression -> identifier = expression
     expression -> constant | identifier + expression
     expression -> constant | identifier
 
@@ -78,7 +79,8 @@ fn prev_token_index() ->usize {
 pub struct Symbol {
     pub primitive : String, 
     pub addr : u32,
-    pub size : u32
+    pub size : u32,
+    pub register : i32
 }
 
 pub struct STManager {
@@ -92,7 +94,7 @@ impl STManager {
     for easier assembly generation */
     fn insert(&mut self, identifier : &String, prim : &String) {
         //Construct symbol
-        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim)});
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim), register : -1});
 
         //Update stack pointer
         self.ordinal += 1;
@@ -100,6 +102,17 @@ impl STManager {
 
     pub fn query(&self, identifier : &String) -> Option<&Symbol>{
         return self.symbol_table.get(identifier)
+    }
+
+    pub fn modify_register(&mut self, identifier : &String, register : i32) {
+        self.symbol_table.insert(
+        identifier.clone(), 
+        Symbol {
+            primitive: self.symbol_table[identifier].primitive.clone(),
+            addr: self.symbol_table[identifier].addr,
+            size: self.symbol_table[identifier].size,
+            register: register 
+        });
     }
 
 }
@@ -437,7 +450,8 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
             if parse(&mut expression_node, tokens, symbol_table) {
 
                 
-                
+                current_node.properties.insert("operation".to_string(), operator_node.properties["value"].clone());
+
                 current_node.children.push(operator_node);
                 current_node.children.push(expression_node);
 
