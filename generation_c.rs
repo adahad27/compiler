@@ -44,92 +44,86 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             if !parse_tree.properties.contains_key("operator") {
                 //Allocate a register
-                let register_number : u32 = register_manager.register_alloc().unwrap();
-                
-                let register_name : String = register_manager.register_name(register_number);
+                let register_number : u32;
+                let register_name : String;
+                let operand : String;
 
-                let operand : String = 
-                if is_identifier(&parse_tree.properties["terminal"]) {
+                if 
+                is_identifier(&parse_tree.properties["terminal"]) &&
+                symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register == -1 {
+
+                    //If this identifier is not stored in a register
+                    let addr : u32 = symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr;
+
+                    register_number = register_manager.register_alloc(addr).unwrap();
+                    register_name = register_manager.register_name(register_number);
                     symbol_table.modify_register(&parse_tree.properties["terminal"], register_number as i32);
-                    format!("[rbp-{}]", symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr)
-                } 
-                else {
-                    parse_tree.properties["terminal"].clone()
-                };
 
-                //Move value into allocated register
-                program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
+                    operand = format!("[rbp-{}]", addr);
+
+                    //Move value into allocated register
+                    program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
+                    
+                } 
+                else if !is_identifier(&parse_tree.properties["terminal"]){
+                    operand = parse_tree.properties["terminal"].clone();
+                    register_number = register_manager.register_alloc(0).unwrap();
+                    register_name = register_manager.register_name(register_number);
+                    //Move value into allocated register
+                    program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
+                }
+
+                
             }
             else {
 
             }
             
         }
-        NodeType::VarDecl => {
-            /* 
-            1.) Subtract stack pointer by size
-            2.) Push variable onto stack
-            3.) Update symbol table
-            */
-            
+        NodeType::VarDecl => {            
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
             if parse_tree.children.len() == 3 || parse_tree.children.len() == 5 {
-                //This is a declaration like "int x;"
                 program_string.push_str("\tpush 0\n");
             }
             if parse_tree.children.len() == 4 || parse_tree.children.len() == 5 {
-                //This is an assignment like y = 4;
-                
                 let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
-
                 let operand : String = parse_tree.properties["value"].clone();
+                let source : String;
+                /* If RHS is a variable, then by the time we arrive at VarDecl node, the expression generation should have already placed
+                the value of the identifier into a register. So we can reuse that register value here. */
+                if is_identifier(&operand) && symbol_table.query(&operand).unwrap().register != -1 {
 
-                if is_identifier(&operand) {
-                    // program_string.push_str(format!("\tmov rax, [rbp{}]\n", symbol_table.query(&operand).unwrap().addr).as_str());
-                    program_string.push_str(format!("\tmov [rbp-{}], {}\n", offset, symbol_table.query(&operand).unwrap().register).as_str());
+                    let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);
+                    source = register_name;
 
-                    //Free up register and deassociate it from the variable
-                    // register_manager.register_free(symbol_table.query(&operand).unwrap().register as u32);
-                    // symbol_table.modify_register(&operand, -1);
-                    
                 }
                 else {
-                    program_string.push_str(format!("\tmov dword [rbp-{}], {}\n", offset, operand).as_str());
+                    //RHS immediate can be moved directly onto the stack
+                    source = operand;
+                    
                 }
-
-                
+                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, source).as_str());             
             }
             
-
-
-            // if let Option::Some(query_value) = symbol_table.query(&parse_tree.properties["identifier"]) {
-            //     program_string.push_str(format!("\tpush {}\n", &parse_tree.properties["value"]).as_str());
-            // }
         }
         NodeType::ReturnStatement => {
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             if parse_tree.children[1].properties.contains_key("terminal") {
-                if is_identifier(&parse_tree.children[1].properties["terminal"]) {
+                let operand : String = parse_tree.children[1].properties["terminal"].clone();
+                let source : String;
+                if is_identifier(&operand) {
                     //Then we have an identifier
-                    
-                    //We must perform a lookup to get the value
-                    if symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().register == -1 {
-                        let offset : i32 = symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().addr.clone() as i32;
-                        program_string.push_str(format!("\tmov rdi, [rbp-{}]\n", offset).as_str());
-                    }
-                    else {
-                        let register_number : i32 = symbol_table.query(&parse_tree.children[1].properties["terminal"]).unwrap().register;
-                        let register_name : String = register_manager.register_name(register_number as u32);
-                        program_string.push_str(format!("\tmov rdi, {}\n", register_name).as_str());
-                    }
+                    let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);
+                    source = register_name;
                     
                 }
                 else {
                     //Then we have an actual number
-                    program_string.push_str(format!("\tmov rdi, {}\n", parse_tree.children[1].properties["terminal"]).as_str());
+                    source = operand;
                 }
+                program_string.push_str(format!("\tmov rdi, {}\n", source).as_str());
             }
             
             
@@ -154,7 +148,8 @@ fn generate_exit_stub(program_string : &mut String) {
 
 struct Register {
     name : String,
-    in_use: bool
+    in_use : bool,
+    addr : u32
 }
 struct RegisterManager {
     register_list : Vec<Register>
@@ -165,22 +160,23 @@ impl RegisterManager {
     fn initialize(&mut self) {
         // self.register_list = Vec::new();
         //Hardcoded register names specifically for x86 architecture
-        self.register_list.push(Register{name : "rbx".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r10".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r11".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r12".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r13".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r14".to_string(), in_use : false});
-        self.register_list.push(Register{name : "r15".to_string(), in_use : false});
+        self.register_list.push(Register{name : "rbx".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r10".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r11".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r12".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r13".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r14".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r15".to_string(), in_use : false, addr : 0});
     }
 
-    fn register_alloc(&mut self) -> Option<u32> {
+    fn register_alloc(&mut self, addr : u32) -> Option<u32> {
         let mut index : usize = 0;
 
         while index < self.register_list.len() {
 
             if !self.register_list[index].in_use {
                 self.register_list[index].in_use = true;
+                self.register_list[index].addr = addr;
                 return Option::Some(index as u32);            
             }
 
@@ -192,6 +188,7 @@ impl RegisterManager {
 
     fn register_free(&mut self, reg_index : u32) {
         self.register_list[reg_index as usize].in_use = false;
+        self.register_list[reg_index as usize].addr = 0;
     }
 
     fn register_name(&self, reg_index : u32) -> String {
