@@ -356,6 +356,8 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(identity_node);
             current_node.children.push(operator_node);
             current_node.children.push(expression_node);
+            current_node.properties.insert("value".to_string(), current_node.children[2].properties["terminal"].clone());
+            current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
             current_node.children.push(semicolon_node);
 
             return true;

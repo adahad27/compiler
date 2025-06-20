@@ -74,25 +74,33 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
-            // if parse_tree.children.len() == 3 {
-            //     //This is a declaration like "int x;"
-            //     program_string.push_str("\tpush 0\n");
-            // }
-            // else if parse_tree.children.len() == 4 {
-            //     //This is an assignment like y = 4;
-            //     program_string.push_str(format!("\t mov [rbp-{}] {}", 1, parse_tree.children[2].value.clone()).as_str());
-            // }
-            // else if parse_tree.children.len() == 5 {
-            //     //This is a definition like int z = 5;
-            //     //Will need to modify what is pushed to the stack based on RHS expression
-            //     program_string.push_str(format!("\tpush {}\n", parse_tree.children[3].value.clone()).as_str());
-            // }
+            if parse_tree.children.len() == 3 || parse_tree.children.len() == 5 {
+                //This is a declaration like "int x;"
+                program_string.push_str("\tpush 0\n");
+            }
+            if parse_tree.children.len() == 4 || parse_tree.children.len() == 5 {
+                //This is an assignment like y = 4;
+                
+                let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+
+                let operand : String = parse_tree.properties["value"].clone();
+
+                if is_identifier(&operand) {
+                    program_string.push_str(format!("\tmov rax, [rbp-{}]\n", symbol_table.query(&operand).unwrap().addr).as_str());
+                    program_string.push_str(format!("\tmov [rbp-{}], rax\n", offset).as_str());
+                }
+                else {
+                    program_string.push_str(format!("\tmov dword [rbp-{}], {}\n", offset, operand).as_str());
+                }
+
+                
+            }
             
 
 
-            if let Option::Some(query_value) = symbol_table.query(&parse_tree.properties["identifier"]) {
-                program_string.push_str(format!("\tpush {}\n", &parse_tree.properties["value"]).as_str());
-            }
+            // if let Option::Some(query_value) = symbol_table.query(&parse_tree.properties["identifier"]) {
+            //     program_string.push_str(format!("\tpush {}\n", &parse_tree.properties["value"]).as_str());
+            // }
         }
         NodeType::ReturnStatement => {
             generate_children(program_string, parse_tree, symbol_table, register_manager);
