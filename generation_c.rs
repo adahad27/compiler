@@ -60,7 +60,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                     symbol_table.modify_register(&parse_tree.properties["terminal"], register_number as i32);
 
                     operand = format!("[rbp-{}]", addr);
-
+                    parse_tree.properties.insert("register".to_string(), register_name.to_string());
                     //Move value into allocated register
                     program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
                     
@@ -69,6 +69,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                     operand = parse_tree.properties["terminal"].clone();
                     register_number = register_manager.register_alloc(0).unwrap();
                     register_name = register_manager.register_name(register_number);
+                    parse_tree.properties.insert("register".to_string(), register_name.to_string());
                     //Move value into allocated register
                     program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
                 }
@@ -87,24 +88,14 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             if parse_tree.children.len() == 3 || parse_tree.children.len() == 5 {
                 program_string.push_str("\tpush 0\n");
             }
-            if parse_tree.children.len() == 4 || parse_tree.children.len() == 5 {
-                let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
-                let operand : String = parse_tree.properties["value"].clone();
-                let source : String;
-                /* If RHS is a variable, then by the time we arrive at VarDecl node, the expression generation should have already placed
-                the value of the identifier into a register. So we can reuse that register value here. */
-                if is_identifier(&operand) && symbol_table.query(&operand).unwrap().register != -1 {
-
-                    let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);
-                    source = register_name;
-
-                }
-                else {
-                    //RHS immediate can be moved directly onto the stack
-                    source = operand;
-                    
-                }
-                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, source).as_str());             
+            let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+            if parse_tree.children.len() == 4 {
+                let register_name : String =  parse_tree.children[2].properties["register"].clone();
+                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
+            }
+            else if parse_tree.children.len() == 5 {
+                let register_name : String =  parse_tree.children[3].properties["register"].clone();
+                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
             }
             
         }
@@ -113,6 +104,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             if parse_tree.children[1].properties.contains_key("terminal") {
                 let operand : String = parse_tree.children[1].properties["terminal"].clone();
                 let source : String;
+                // let source : String = parse_tree.children[1].properties["register"].clone();
                 if is_identifier(&operand) {
                     //Then we have an identifier
                     let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);
@@ -189,6 +181,36 @@ impl RegisterManager {
     fn register_free(&mut self, reg_index : u32) {
         self.register_list[reg_index as usize].in_use = false;
         self.register_list[reg_index as usize].addr = 0;
+    }
+
+    fn register_index(&self, register_name : &String) -> i32 {
+        let name = register_name.as_str();
+        match name {
+            "rbx" => {
+                0
+            }
+            "r10" => {
+                1
+            }
+            "r11" => {
+                2
+            }
+            "r12" => {
+                3
+            }
+            "r13" => {
+                4
+            }
+            "r14" => {
+                5
+            }
+            "r15" => {
+                6
+            }
+            _ => {
+                -1
+            }
+        }
     }
 
     fn register_name(&self, reg_index : u32) -> String {
