@@ -96,6 +96,10 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                         parse_tree.properties.insert("register".to_string(), register_name.clone());
                         program_string.push_str(format!("\tmov {}, {}\n", register_name, addr).as_str());
                     }
+                    else {
+                        let register_name : String = register_manager.register_name(symbol_table.query(&left_operand).unwrap().register as u32);
+                        parse_tree.properties.insert("register".to_string(), register_name);
+                    }
                 }
                 else {
                     //Left node is a constant, so we must allocate a register
