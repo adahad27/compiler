@@ -91,10 +91,12 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
             if parse_tree.children.len() == 4 {
                 let register_name : String =  parse_tree.children[2].properties["register"].clone();
+                symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
                 program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
             }
             else if parse_tree.children.len() == 5 {
                 let register_name : String =  parse_tree.children[3].properties["register"].clone();
+                symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
                 program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
             }
             
@@ -104,7 +106,6 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             if parse_tree.children[1].properties.contains_key("terminal") {
                 let operand : String = parse_tree.children[1].properties["terminal"].clone();
                 let source : String;
-                // let source : String = parse_tree.children[1].properties["register"].clone();
                 if is_identifier(&operand) {
                     //Then we have an identifier
                     let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);

@@ -5,7 +5,6 @@ _start:
 	push 0
 	mov rbx, 4
 	mov qword [rbp-8], rbx
-	mov r10, [rbp-8]
-	mov rdi, r10
+	mov rdi, rbx
 	mov rax, 60
 	syscall
