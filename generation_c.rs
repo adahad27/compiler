@@ -47,7 +47,6 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let register_number : u32;
                 let register_name : String;
                 let operand : String;
-
                 if 
                 is_identifier(&parse_tree.properties["terminal"]) &&
                 symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register == -1 {
@@ -108,7 +107,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 }
                 
                 //Perform the operation and store in the register for the left node.
-                program_string.push_str(format!("\tadd {}, {}", &parse_tree.properties["register"], &parse_tree.children[2].properties["register"]).as_str());
+                program_string.push_str(format!("\tadd {}, {}\n", &parse_tree.properties["register"], &parse_tree.children[2].properties["register"]).as_str());
 
 
                 //Free the right node.

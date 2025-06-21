@@ -449,8 +449,9 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
             if parse(&mut expression_node, tokens, symbol_table) {
 
                 
-                current_node.properties.insert("operation".to_string(), operator_node.properties["value"].clone());
-
+                current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
+                
+                current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
                 current_node.children.push(operator_node);
                 current_node.children.push(expression_node);
 
