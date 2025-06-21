@@ -64,7 +64,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                     //Move value into allocated register
                     program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
                     
-                } 
+                }
+                else if 
+                is_identifier(&parse_tree.properties["terminal"]) &&
+                symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register != -1 {
+                    let register_name : String = register_manager.register_name(symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register as u32);
+                    parse_tree.properties.insert("register".to_string(), register_name);
+                }
                 else if !is_identifier(&parse_tree.properties["terminal"]){
                     operand = parse_tree.properties["terminal"].clone();
                     register_number = register_manager.register_alloc(0).unwrap();
@@ -77,7 +83,35 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 
             }
             else {
+                //This is an expression of the form 'identifier | constant + expression'
 
+                //Allocate a register for the left node if one hasn't been allocated already
+                let left_operand : String = parse_tree.children[0].properties["value"].clone();
+                if is_identifier(&left_operand) {
+                    //Left node is an identifier, so allocate a register iff one isn't allocated already.
+                    if symbol_table.query(&left_operand).unwrap().register == -1 {
+                        //No register has been allocated to it so far
+                        let addr : u32 = symbol_table.query(&left_operand).unwrap().addr;
+                        let register_number: u32 = register_manager.register_alloc(addr).unwrap();
+                        let register_name : String = register_manager.register_name(register_number);
+                        parse_tree.properties.insert("register".to_string(), register_name.clone());
+                        program_string.push_str(format!("\tmov {}, {}\n", register_name, addr).as_str());
+                    }
+                }
+                else {
+                    //Left node is a constant, so we must allocate a register
+                    let addr : u32 = 0;
+                    let register_number: u32 = register_manager.register_alloc(addr).unwrap();
+                    let register_name : String = register_manager.register_name(register_number);
+                    parse_tree.properties.insert("register".to_string(), register_name.clone());
+                    program_string.push_str(format!("\tmov {}, {}\n", register_name, left_operand).as_str());
+                }
+                
+                //Perform the operation and store in the register for the left node.
+                program_string.push_str(format!("\tadd {}, {}", &parse_tree.properties["register"], &parse_tree.children[2].properties["register"]).as_str());
+
+
+                //Free the right node.
             }
             
         }

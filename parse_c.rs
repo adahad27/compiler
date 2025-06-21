@@ -346,9 +346,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(expression_node);
             current_node.children.push(semicolon_node);
 
-            current_node.properties.insert("value".to_string(), current_node.children[3].properties["terminal"].clone());
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
-            
             symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
             return true;
 
@@ -369,7 +367,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(identity_node);
             current_node.children.push(operator_node);
             current_node.children.push(expression_node);
-            current_node.properties.insert("value".to_string(), current_node.children[2].properties["terminal"].clone());
+            
             current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
             current_node.children.push(semicolon_node);
 
@@ -440,6 +438,7 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
 
             //Set the terminal property of an expression iff the expression evaluates to a terminal
             current_node.properties.insert("terminal".to_string(), if identifier_parse {identifier_node.properties["value"].clone()} else {constant_node.properties["value"].clone()});
+            // println!("{}", if identifier_parse {identifier_node.properties["value"].clone()} else {constant_node.properties["value"].clone()});
             current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
             
             return true;
