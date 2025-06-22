@@ -111,6 +111,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 }
                 
                 //Perform the operation and store in the register for the left node.
+                register_manager.register_free(register_manager.register_index(&parse_tree.children[2].properties["register"]) as u32);
                 program_string.push_str(format!("\tadd {}, {}\n", &parse_tree.properties["register"], &parse_tree.children[2].properties["register"]).as_str());
 
 

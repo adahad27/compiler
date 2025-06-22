@@ -14,9 +14,9 @@ _start:
 	mov r12, 1
 	add r12, rbx
 	add r10, r12
-	mov r13, 2
-	add r13, r10
-	add r11, r13
+	mov rbx, 2
+	add rbx, r10
+	add r11, rbx
 	push 0
 	mov qword [rbp-32], r11
 	mov rdi, r11

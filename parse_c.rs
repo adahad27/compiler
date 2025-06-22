@@ -22,6 +22,15 @@ x   function declaration -> primitive identifier ();
     var_decl -> identifier = expression ;
 
 x   expression -> identifier = expression
+    
+    a = identifier | constant
+
+    expression -> a subexpr
+    subexpr -> [+ term subexpr] | [- term subexpr] | term | empty
+    term -> a subterm
+    subterm -> [* factor subterm] | [/ factor subterm] | factor | empty
+    factor -> a | (expression)
+
     expression -> constant | identifier + expression
     expression -> constant | identifier
 
@@ -127,6 +136,10 @@ pub enum NodeType {
     Identifier,
     Body,
     Expression,
+    Subexpr,
+    Term,
+    Subterm,
+    Factor,
     Statement,
     ReturnStatement,
     VarDecl,
@@ -182,6 +195,18 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
         }
         NodeType::Expression => {
             return parse_expression(current_node, tokens, symbol_table)
+        }
+        NodeType::Subexpr => {
+            return parse_subexpr(current_node, tokens, symbol_table)
+        }
+        NodeType::Term => {
+            return parse_term(current_node, tokens, symbol_table);
+        }
+        NodeType::Subterm => {
+            return parse_subterm(current_node, tokens, symbol_table)
+        }
+        NodeType::Factor => {
+            return parse_factor(current_node, tokens, symbol_table);
         }
         NodeType::Statement => {
             return parse_statement(current_node, tokens, symbol_table);            
@@ -424,49 +449,132 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
 
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut subexpr_node : Node = create_node(NodeType::Subexpr);
 
     let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
     let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
 
-    //We want the first token to be an identifier XOR constant
-    if identifier_parse != constant_parse{
+    if identifier_parse != constant_parse && parse(&mut subexpr_node, tokens, symbol_table) {
+        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
+        current_node.children.push(subexpr_node);
+        return true;
+    }
+    return false;
+}
 
+fn parse_subexpr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    subexpr -> [+ term subexpr] | [- term subexpr] | term | empty
+     */
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut term_node : Node = create_node(NodeType::Term);
+    let mut subexpr_node : Node = create_node(NodeType::Subexpr);
+
+    if 
+    (tokens[get_current_token_index()].val == "+".to_string() ||
+    tokens[get_current_token_index()].val == "-".to_string()) &&
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut term_node, tokens, symbol_table) &&
+    parse(&mut subexpr_node, tokens, symbol_table) {
         
-        let mut operator_node : Node = create_node(NodeType::Operator);
+        //First 2 rules + semantic checking
+        current_node.children.push(operator_node);
+        current_node.children.push(term_node);
+        current_node.children.push(subexpr_node);
 
-        if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+    else if parse(&mut term_node, tokens, symbol_table) {
 
-            //Set the terminal property of an expression iff the expression evaluates to a terminal
-            current_node.properties.insert("terminal".to_string(), if identifier_parse {identifier_node.properties["value"].clone()} else {constant_node.properties["value"].clone()});
-            // println!("{}", if identifier_parse {identifier_node.properties["value"].clone()} else {constant_node.properties["value"].clone()});
-            current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-            
-            return true;
-        }
-        else if is_operator(&tokens[get_current_token_index()].val) {
-            parse(&mut operator_node, tokens, symbol_table);
-            let mut expression_node = create_node(NodeType::Expression);
-            if parse(&mut expression_node, tokens, symbol_table) {
+        //3rd rule
+        current_node.children.push(term_node);
+        return true;
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        
+        //This is equivalent to the empty character case because ; signifies the end of the expression
+        return true;
+    }
 
-                
-                current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
-                
-                current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-                current_node.children.push(operator_node);
-                current_node.children.push(expression_node);
+    return false;
+}
 
-                
+fn parse_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    term -> constant | identifier subterm
+     */
 
-                return true;
-            }
-            return false;
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut subterm_node : Node = create_node(NodeType::Subterm);
 
-        }
-        return false;
+    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
+    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
 
-    } 
-    
+    if identifier_parse != constant_parse  && parse(&mut subterm_node, tokens, symbol_table){
+        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
+        current_node.children.push(subterm_node);
+        return true;
+    }
 
+    return false;
+}
+
+fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    subterm -> [* factor subterm] | [/ factor subterm] | factor | empty
+     */
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut factor_node : Node = create_node(NodeType::Factor);
+    let mut subterm_node : Node = create_node(NodeType::Subterm);
+
+    if 
+    (tokens[get_current_token_index()].val == "*".to_string() ||
+    tokens[get_current_token_index()].val == "/".to_string()) &&
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut factor_node, tokens, symbol_table) &&
+    parse(&mut subterm_node, tokens, symbol_table) {
+        
+        //First 2 rules + semantic checking
+        current_node.children.push(operator_node);
+        current_node.children.push(factor_node);
+        current_node.children.push(subterm_node);
+
+        return true;
+    }
+    else if parse(&mut factor_node, tokens, symbol_table) {
+
+        //3rd rule
+        current_node.children.push(factor_node);
+        return true;
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        
+        //This is equivalent to the empty character case because ; signifies the end of the expression
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    Factor -> constant | identifier | (expression)
+     */
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut constant_node : Node = create_node(NodeType::Constant);
+
+    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
+    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
+
+    if identifier_parse != constant_parse {
+        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
+        return true;
+    }
 
     return false;
 }
