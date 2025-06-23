@@ -485,7 +485,6 @@ fn parse_subexpr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     parse(&mut subexpr_node, tokens, symbol_table) {
         
         //First 2 rules + semantic checking
-        
         current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
         current_node.children.push(operator_node);
 
@@ -570,6 +569,9 @@ fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         return true;
     }
+    else if is_operator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
     else if is_separator(&tokens[get_current_token_index()].val) {
         
         //This is equivalent to the empty character case because ; signifies the end of the expression
@@ -590,7 +592,6 @@ fn parse_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_
     let mut constant_node : Node = create_node(NodeType::Constant);
     let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
     let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
-
     if identifier_parse != constant_parse {
         current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());

@@ -51,30 +51,50 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let reg_name : String = register_manager.register_name(reg_index);
                 
                 //Move it into a register
-                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, left_operand).as_str());
+                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, left_operand).as_str());
 
-                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name);
+                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name.clone());
                 generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
+                let result_reg : String = 
+                if parse_tree.children[1].properties.contains_key("register") {
+                    parse_tree.children[1].properties["register"].clone()
+                }
+                else {
+                    reg_name
+                };
+                parse_tree.properties.insert("register".to_string(), result_reg);
                 //Free allocated register
-                register_manager.register_free(reg_index);
                 fs::write("main_generated.asm", program_string).expect("Unable to write to file");
             }
 
         }
         NodeType::Subexpr => {
-            let operator : String = parse_tree.properties["operator"].clone();
+            if parse_tree.properties.contains_key("operator") {
+                let operator : String = parse_tree.properties["operator"].clone();
 
-            /* Generate term node completely, so all multiplication, division, and parenthesis
-            are given priority before addition, subtraction */
-            let term_node : &mut Node = &mut parse_tree.children[1];
-            generate_from_tree(program_string, term_node, symbol_table, register_manager);
-            //The register that stores the result from evaluating term is stored in the result property
-            let result_reg : String = term_node.properties["register"].clone();
+                /* Generate term node completely, so all multiplication, division, and parenthesis
+                are given priority before addition, subtraction */
+                let term_node : &mut Node = &mut parse_tree.children[1];
+                generate_from_tree(program_string, term_node, symbol_table, register_manager);
+                //The register that stores the result from evaluating term is stored in the result property
+                let result_reg : String = term_node.properties["register"].clone();
 
-            program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), result_reg, parse_tree.properties["prev_register"]).as_str());
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"], result_reg).as_str());
 
-            //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-            parse_tree.children[1].properties.insert("prev_register".to_string(), result_reg);
+                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
+                parse_tree.children[2].properties.insert("prev_register".to_string(), result_reg.clone());
+                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+
+                let subexpr_node : &mut Node = &mut parse_tree.children[2];
+                generate_from_tree(program_string, subexpr_node, symbol_table, register_manager);
+            }
+            else if parse_tree.properties.contains_key("terminal") {
+                let term_node : &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, term_node, symbol_table, register_manager);
+
+                let result_reg : String = term_node.properties["register"].clone();
+                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+            }
 
             //TODO: Add terminal case for when subexprs end
         }
@@ -91,13 +111,19 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let reg_name : String = register_manager.register_name(reg_index);
                 
                 //Move it into a register
-                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, left_operand).as_str());
+                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, left_operand).as_str());
 
                 parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name.clone());
                 generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
-                parse_tree.properties.insert("register".to_string(), reg_name);
+                let result_reg : String = 
+                if parse_tree.children[1].properties.contains_key("register") {
+                    parse_tree.children[1].properties["register"].clone()
+                }
+                else {
+                    reg_name
+                };
+                parse_tree.properties.insert("register".to_string(), result_reg);
                 //Free allocated register
-                register_manager.register_free(reg_index);
             }
         }
         NodeType::Subterm => {
