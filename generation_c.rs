@@ -39,85 +39,110 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
         }
         NodeType::Expression => {
-            
-            generate_children(program_string, parse_tree, symbol_table, register_manager);
 
-            if !parse_tree.properties.contains_key("operator") {
-                //Allocate a register
-                let register_number : u32;
-                let register_name : String;
-                let operand : String;
-                if 
-                is_identifier(&parse_tree.properties["terminal"]) &&
-                symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register == -1 {
+            assert!(parse_tree.properties.contains_key("terminal"));
+            let left_operand : String = parse_tree.properties["terminal"].clone();
 
-                    //If this identifier is not stored in a register
-                    let addr : u32 = symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr;
+            if !is_identifier(&left_operand) {
+                //Left operand is a constant
 
-                    register_number = register_manager.register_alloc(addr).unwrap();
-                    register_name = register_manager.register_name(register_number);
-                    symbol_table.modify_register(&parse_tree.properties["terminal"], register_number as i32);
-
-                    operand = format!("[rbp-{}]", addr);
-                    parse_tree.properties.insert("register".to_string(), register_name.to_string());
-                    //Move value into allocated register
-                    program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
-                    
-                }
-                else if 
-                is_identifier(&parse_tree.properties["terminal"]) &&
-                symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register != -1 {
-                    let register_name : String = register_manager.register_name(symbol_table.query(&parse_tree.properties["terminal"]).unwrap().register as u32);
-                    parse_tree.properties.insert("register".to_string(), register_name);
-                }
-                else if !is_identifier(&parse_tree.properties["terminal"]){
-                    operand = parse_tree.properties["terminal"].clone();
-                    register_number = register_manager.register_alloc(0).unwrap();
-                    register_name = register_manager.register_name(register_number);
-                    parse_tree.properties.insert("register".to_string(), register_name.to_string());
-                    //Move value into allocated register
-                    program_string.push_str(format!("\tmov {}, {}\n", register_name, operand).as_str());
-                }
-
+                //Allocate register for it
+                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                let reg_name : String = register_manager.register_name(reg_index);
                 
+                //Move it into a register
+                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, left_operand).as_str());
+
+                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name);
+                generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
+                //Free allocated register
+                register_manager.register_free(reg_index);
+                fs::write("main_generated.asm", program_string).expect("Unable to write to file");
+            }
+
+        }
+        NodeType::Subexpr => {
+            let operator : String = parse_tree.properties["operator"].clone();
+
+            /* Generate term node completely, so all multiplication, division, and parenthesis
+            are given priority before addition, subtraction */
+            let term_node : &mut Node = &mut parse_tree.children[1];
+            generate_from_tree(program_string, term_node, symbol_table, register_manager);
+            //The register that stores the result from evaluating term is stored in the result property
+            let result_reg : String = term_node.properties["register"].clone();
+
+            program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), result_reg, parse_tree.properties["prev_register"]).as_str());
+
+            //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
+            parse_tree.children[1].properties.insert("prev_register".to_string(), result_reg);
+
+            //TODO: Add terminal case for when subexprs end
+        }
+        NodeType::Term => {
+            
+            assert!(parse_tree.properties.contains_key("terminal"));
+            let left_operand : String = parse_tree.properties["terminal"].clone();
+
+            if !is_identifier(&left_operand) {
+                //Left operand is a constant
+
+                //Allocate register for it
+                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                let reg_name : String = register_manager.register_name(reg_index);
+                
+                //Move it into a register
+                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, left_operand).as_str());
+
+                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name.clone());
+                generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
+                parse_tree.properties.insert("register".to_string(), reg_name);
+                //Free allocated register
+                register_manager.register_free(reg_index);
+            }
+        }
+        NodeType::Subterm => {
+            if parse_tree.properties.contains_key("operator") {
+                let operator : String = parse_tree.properties["operator"].clone();
+
+                /* Generate term node completely, so all multiplication, division, and parenthesis
+                are given priority before addition, subtraction */
+                let factor_node : &mut Node = &mut parse_tree.children[1];
+                generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+                let result_reg : String = factor_node.properties["register"].clone();
+
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), result_reg, parse_tree.properties["prev_register"]).as_str());
+
+                //Store the results in the next factor_node node, so that it can pick up from where this node left off if needed.
+                parse_tree.children[1].properties.insert("prev_register".to_string(), result_reg.clone());
+                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+            }
+            else if parse_tree.properties.contains_key("terminal"){
+                let factor_node : &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+
+                let result_reg : String = factor_node.properties["register"].clone();
+                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+            }
+            
+            //TODO: Add terminal case for when factor_node end
+        }
+        NodeType::Factor => {
+            let operand : String = parse_tree.properties["terminal"].clone();
+            if is_identifier(&operand) {
+
             }
             else {
-                //This is an expression of the form 'identifier | constant + expression'
+                //Left operand is a constant
 
-                //Allocate a register for the left node if one hasn't been allocated already
-                let left_operand : String = parse_tree.children[0].properties["value"].clone();
-                if is_identifier(&left_operand) {
-                    //Left node is an identifier, so allocate a register iff one isn't allocated already.
-                    if symbol_table.query(&left_operand).unwrap().register == -1 {
-                        //No register has been allocated to it so far
-                        let addr : u32 = symbol_table.query(&left_operand).unwrap().addr;
-                        let register_number: u32 = register_manager.register_alloc(addr).unwrap();
-                        let register_name : String = register_manager.register_name(register_number);
-                        parse_tree.properties.insert("register".to_string(), register_name.clone());
-                        program_string.push_str(format!("\tmov {}, {}\n", register_name, addr).as_str());
-                    }
-                    else {
-                        let register_name : String = register_manager.register_name(symbol_table.query(&left_operand).unwrap().register as u32);
-                        parse_tree.properties.insert("register".to_string(), register_name);
-                    }
-                }
-                else {
-                    //Left node is a constant, so we must allocate a register
-                    let addr : u32 = 0;
-                    let register_number: u32 = register_manager.register_alloc(addr).unwrap();
-                    let register_name : String = register_manager.register_name(register_number);
-                    parse_tree.properties.insert("register".to_string(), register_name.clone());
-                    program_string.push_str(format!("\tmov {}, {}\n", register_name, left_operand).as_str());
-                }
+                //Allocate register for it
+                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                let reg_name : String = register_manager.register_name(reg_index);
                 
-                //Perform the operation and store in the register for the left node.
-                register_manager.register_free(register_manager.register_index(&parse_tree.children[2].properties["register"]) as u32);
-                program_string.push_str(format!("\tadd {}, {}\n", &parse_tree.properties["register"], &parse_tree.children[2].properties["register"]).as_str());
+                //Move it into a register
+                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, operand).as_str());
 
-
-                //Free the right node.
+                parse_tree.properties.insert("register".to_string(), reg_name);
             }
-            
         }
         NodeType::VarDecl => {            
             
@@ -257,6 +282,19 @@ impl RegisterManager {
     }
 
 }
+
+fn to_operator(operator : String) -> String {
+    let op_str = operator.as_str();
+    match op_str {
+        "+" => "add".to_string(),
+        "-" => "sub".to_string(),
+        "*" => "imul".to_string(),
+        "/" => "idiv".to_string(),
+
+        _ => "Error: Incorrect operator found".to_string()
+    }
+}
+
 
 fn label_create() -> u32 {
     unsafe {

@@ -14,7 +14,7 @@ fn main() {
 
     let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), ordinal : 1};
     
-    let token_list : Vec<Token> = lex("src_files/basic_lexing/test_2.c");
+    let token_list : Vec<Token> = lex("src_files/basic_lexing/test_1.c");
 
     // print_tokens(&token_list);
 
