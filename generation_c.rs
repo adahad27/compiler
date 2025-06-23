@@ -79,11 +79,11 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //The register that stores the result from evaluating term is stored in the result property
                 let result_reg : String = term_node.properties["register"].clone();
 
-                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"], result_reg).as_str());
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
 
                 //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-                parse_tree.children[2].properties.insert("prev_register".to_string(), result_reg.clone());
-                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
+                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
 
                 let subexpr_node : &mut Node = &mut parse_tree.children[2];
                 generate_from_tree(program_string, subexpr_node, symbol_table, register_manager);
