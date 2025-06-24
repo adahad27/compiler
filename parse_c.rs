@@ -25,14 +25,19 @@ x   expression -> identifier = expression
     
     a = identifier | constant
 
-    expression -> term subexpr
-    subexpr -> [+ term subexpr] | [- term subexpr] | term | empty
-    term -> factor subterm
-    subterm -> [* factor subterm] | [/ factor subterm] | factor | empty
-    factor -> a | (expression)
+    arith_expr -> arith_term subexpr
+    subexpr -> [+ arith_term subexpr] | [- arith_term subexpr] | arith_term | empty
+    arith_term -> arith_factor arith_subterm
+    arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
+    arith_factor -> a | (arith_expr)
 
-    expression -> constant | identifier + expression
-    expression -> constant | identifier
+    bool_expr -> bool_term bool_subexpr
+    bool_subexpr -> [|| bool_term bool_subexpr] | empty
+    bool_term -> bool_factor bool_subterm
+    bool_subterm -> [&& bool_factor bool_subterm] | empty
+    bool_factor -> bool_operand bool_subfactor
+    bool_subfactor -> [== | !=] bool_operand bool_subfactor | empty
+    bool_operand -> [! | empty] [identifier | constant]
 
     statement -> ret_stmt
     ret_stmt -> keyword expression ;
