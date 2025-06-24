@@ -6,7 +6,7 @@ logic
 
 use std::fs;
 
-use crate::{parse_c::{Node, NodeType, STManager}, token_c::is_identifier};
+use crate::{parse_c::{create_node, Node, NodeType, STManager}, token_c::is_identifier};
 
 static mut CURRENT_LABEL_INDEX : u32 = 0;
 
@@ -45,16 +45,17 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             if !is_identifier(&left_operand) {
                 //Left operand is a constant
-
-                //Allocate register for it
-                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
-                let reg_name : String = register_manager.register_name(reg_index);
                 
                 //Move it into a register
-                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, left_operand).as_str());
+                let term_node : &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, term_node, symbol_table, register_manager);
+                let reg_name : String = term_node.properties["register"].clone();
 
-                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name.clone());
-                generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
+
+                let subexpr_node : &mut Node = &mut parse_tree.children[1];
+
+                subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+                generate_from_tree(program_string, subexpr_node, symbol_table, register_manager);
                 let result_reg : String = 
                 if parse_tree.children[1].properties.contains_key("register") {
                     parse_tree.children[1].properties["register"].clone()
@@ -105,16 +106,17 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             if !is_identifier(&left_operand) {
                 //Left operand is a constant
-
-                //Allocate register for it
-                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
-                let reg_name : String = register_manager.register_name(reg_index);
                 
                 //Move it into a register
-                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, left_operand).as_str());
+                let factor_node : &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+                let reg_name : String = factor_node.properties["register"].clone();
 
-                parse_tree.children[1].properties.insert("prev_register".to_string(), reg_name.clone());
-                generate_from_tree(program_string, &mut parse_tree.children[1], symbol_table, register_manager);
+                let mut subterm_node : &mut Node = &mut parse_tree.children[1];
+
+                subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
+
+                generate_from_tree(program_string, &mut subterm_node, symbol_table, register_manager);
                 let result_reg : String = 
                 if parse_tree.children[1].properties.contains_key("register") {
                     parse_tree.children[1].properties["register"].clone()
@@ -134,13 +136,24 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 are given priority before addition, subtraction */
                 let factor_node : &mut Node = &mut parse_tree.children[1];
                 generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+                //The register that stores the result from evaluating term is stored in the result property
                 let result_reg : String = factor_node.properties["register"].clone();
 
-                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), result_reg, parse_tree.properties["prev_register"]).as_str());
+                /* This operator will always be multiplication or division, so proper assembly needs to be added to 
+                facilitate these operations. */
 
-                //Store the results in the next factor_node node, so that it can pick up from where this node left off if needed.
-                parse_tree.children[1].properties.insert("prev_register".to_string(), result_reg.clone());
-                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+                if operator == "/".to_string() {
+                    program_string.push_str("\tmov rdx, 0\n");
+                }
+                program_string.push_str(format!("\tmov rax, {}\n", parse_tree.properties["prev_register"].clone()).as_str());
+                program_string.push_str(format!("\t{} {}\n", to_operator(operator), result_reg).as_str());
+                program_string.push_str(format!("\tmov {}, rax\n", parse_tree.properties["prev_register"].clone()).as_str());
+                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
+                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
+                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+
+                let subterm_node : &mut Node = &mut parse_tree.children[2];
+                generate_from_tree(program_string, subterm_node, symbol_table, register_manager);
             }
             else if parse_tree.properties.contains_key("terminal"){
                 let factor_node : &mut Node = &mut parse_tree.children[0];
@@ -165,7 +178,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let reg_name : String = register_manager.register_name(reg_index);
                 
                 //Move it into a register
-                program_string.push_str(format!("\tmov qword {} {}\n", reg_name, operand).as_str());
+                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
 
                 parse_tree.properties.insert("register".to_string(), reg_name);
             }

@@ -48,7 +48,9 @@ pub fn is_operator(input : &String) -> bool {
     input == "+=" ||
     input == "-" ||
     input == "-="||
-    input == "=" {
+    input == "=" ||
+    input == "*" ||
+    input == "/" {
         return true;
     }
     return false;

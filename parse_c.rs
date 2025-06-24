@@ -545,7 +545,6 @@ fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     let mut operator_node : Node = create_node(NodeType::Operator);
     let mut factor_node : Node = create_node(NodeType::Factor);
     let mut subterm_node : Node = create_node(NodeType::Subterm);
-
     if 
     (tokens[get_current_token_index()].val == "*".to_string() ||
     tokens[get_current_token_index()].val == "/".to_string()) &&
