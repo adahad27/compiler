@@ -79,7 +79,9 @@ fn is_keyword(input : &String) -> bool {
     input == "else" ||
     input == "while" ||
     input == "for" ||
-    input == "return" {
+    input == "return" ||
+    input == "true" ||
+    input == "false" {
         return true;
     }
     return false;
@@ -139,7 +141,8 @@ pub fn lex_file(input : String) -> Vec<Token> {
     delimit tokens according to whitespace, separators, or operators.
     Separators and operators will also be tokenized.
     */
-    for character in input.chars() {
+    let mut it =input.chars().peekable(); 
+    while let Option::Some(character) = it.next() {
         if is_whitespace(&character.to_string()) {
             if current_token_val != "".to_string() {
                 token_vector.push(construct_token(&current_token_val));
@@ -151,7 +154,31 @@ pub fn lex_file(input : String) -> Vec<Token> {
         TODO: Current implementation will not be able to lex operators that have
         more than one character. This will need to be fixed.
         */
-        if is_operator(&character.to_string()) || is_separator(&character.to_string()){
+        if is_separator(&character.to_string()){
+            
+            if current_token_val != "".to_string() {
+                token_vector.push(construct_token(&current_token_val));
+            }
+            token_vector.push(construct_token(&character.to_string()));
+            current_token_val = "".to_string();
+            continue;
+        }
+
+        if 
+        (character.to_string() == "=" && it.peek().unwrap().to_string() == "=") ||
+        (character.to_string() == "!" && it.peek().unwrap().to_string() == "=") ||
+        (character.to_string() == "&" && it.peek().unwrap().to_string() == "&") ||
+        (character.to_string() == "|" && it.peek().unwrap().to_string() == "|") {
+            if current_token_val != "".to_string() {
+                token_vector.push(construct_token(&current_token_val));
+            }
+            current_token_val.push(character);
+            current_token_val.push(it.next().unwrap());
+            token_vector.push(construct_token(&current_token_val));
+            current_token_val = "".to_string();
+            continue;
+        }
+        if is_operator(&character.to_string()) {
             if current_token_val != "".to_string() {
                 token_vector.push(construct_token(&current_token_val));
             }
@@ -161,6 +188,7 @@ pub fn lex_file(input : String) -> Vec<Token> {
         }
         current_token_val.push(character);
     }
+
 
     return token_vector;
 }
