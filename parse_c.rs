@@ -25,9 +25,9 @@ x   expression -> identifier = expression
     
     a = identifier | constant
 
-    expression -> a subexpr
+    expression -> term subexpr
     subexpr -> [+ term subexpr] | [- term subexpr] | term | empty
-    term -> a subterm
+    term -> factor subterm
     subterm -> [* factor subterm] | [/ factor subterm] | factor | empty
     factor -> a | (expression)
 
@@ -447,17 +447,19 @@ fn parse_body(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_ta
 
 fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
 
-    let mut identifier_node : Node = create_node(NodeType::Identifier);
-    let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut term_node : Node = create_node(NodeType::Term);
     let mut subexpr_node : Node = create_node(NodeType::Subexpr);
 
-    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
-    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
 
-    if identifier_parse != constant_parse && parse(&mut subexpr_node, tokens, symbol_table) {
+    if 
+    parse(&mut term_node, tokens, symbol_table) && 
+    parse(&mut subexpr_node, tokens, symbol_table) {
 
-        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());
+        current_node.children.push(term_node);
+        if current_node.children[0].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        }
+        
 
         current_node.children.push(subexpr_node);
         if current_node.children[1].properties.contains_key("operator") {
@@ -515,16 +517,15 @@ fn parse_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_ta
     term -> constant | identifier subterm
      */
 
-    let mut identifier_node : Node = create_node(NodeType::Identifier);
-    let mut constant_node : Node = create_node(NodeType::Constant);
+    let mut factor_node : Node = create_node(NodeType::Factor);
     let mut subterm_node : Node = create_node(NodeType::Subterm);
-    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
-    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
 
-    if identifier_parse != constant_parse  && parse(&mut subterm_node, tokens, symbol_table){
+    if 
+    parse(&mut factor_node, tokens, symbol_table)  && 
+    parse(&mut subterm_node, tokens, symbol_table){
         
-        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());
+        current_node.children.push(factor_node);
+        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
 
         current_node.children.push(subterm_node);
         if current_node.children[1].properties.contains_key("operator") {
@@ -575,8 +576,6 @@ fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     else if is_separator(&tokens[get_current_token_index()].val) {
         
         //This is equivalent to the empty character case because ; signifies the end of the expression
-        let mut semicolon_node : Node = create_node(NodeType::Separator);
-        // parse(&mut semicolon_node, tokens, symbol_table);
         return true;
     }
 

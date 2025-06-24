@@ -4,9 +4,9 @@ mod parse_c;
 mod generation_c;
 
 use std::collections::HashMap;
-use crate::token_c::{lex_file, Token, print_tokens};
+use crate::token_c::{lex_file, Token};
 use crate::generation_c::generate_code;
-use crate::parse_c::{parse, create_node, Node, NodeType, Symbol, STManager};
+use crate::parse_c::{parse, create_node, Node, NodeType, STManager};
 
 
 fn main() {
