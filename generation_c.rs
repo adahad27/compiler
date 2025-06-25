@@ -325,10 +325,37 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //Move it into a register
                 program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
                 if parse_tree.properties.contains_key("unary") {
-                    program_string.push_str(format!("\tnot {}\n", reg_name).as_str());
+                    program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                 }
                 parse_tree.properties.insert("register".to_string(), reg_name);
             }
+        }
+        NodeType::Relational_Expr => {
+            let arith_node_left : &mut Node = &mut parse_tree.children[0];
+            generate_from_tree(program_string, arith_node_left, symbol_table, register_manager);
+            let left_reg : String = arith_node_left.properties["register"].clone();
+
+            let arith_node_right : &mut Node = &mut parse_tree.children[2];
+            generate_from_tree(program_string, arith_node_right, symbol_table, register_manager);
+            let right_reg : String = arith_node_right.properties["register"].clone();
+
+            let operator : String = parse_tree.properties["operator"].clone();
+
+            let label_true : String = label_name(label_create());
+            let label_done : String = label_name(label_create());
+
+            //After doing comparison, the results will be stored in the register named in arith_node_left
+            
+            program_string.push_str(format!("\tcmp {}, {}\n", left_reg, right_reg).as_str());
+            program_string.push_str(format!("\t{} {}\n", jump_command(operator), label_true).as_str());
+            program_string.push_str(format!("\tmov {}, 0\n", left_reg).as_str());
+            program_string.push_str(format!("\tjmp {}\n", label_done).as_str());
+            program_string.push_str(format!("{}:\n", label_true).as_str());
+            program_string.push_str(format!("\tmov {}, 1\n", left_reg).as_str());
+            program_string.push_str(format!("{}:\n", label_done).as_str());
+
+            parse_tree.properties.insert("register".to_string(), left_reg);
+            
         }
         NodeType::VarDecl => {            
             
@@ -469,6 +496,18 @@ fn to_operator(operator : String) -> String {
     }
 }
 
+fn jump_command(operator : String) -> String {
+    let op_str = operator.as_str();
+    match op_str {
+        "<" => "jl".to_string(),
+        "<=" => "jle".to_string(),
+        ">" => "jg".to_string(),
+        ">=" => "jge".to_string(),
+
+        _ => "Error: Incorrect operator found".to_string()
+    }
+}
+
 
 fn label_create() -> u32 {
     unsafe {
@@ -502,7 +541,7 @@ fn and_or_generator(program_string : &mut String, operator : &String, prev_reg :
     program_string.push_str(format!("\tcmp {}, {}\n", next_reg, short_circuit_op).as_str());
     program_string.push_str(format!("\tje {}\n", label_true.clone()).as_str());
     program_string.push_str(format!("\tmov {}, {}\n", prev_reg, full_eval_op).as_str());
-    program_string.push_str(format!("\tje {}\n", label_done.clone()).as_str());
+    program_string.push_str(format!("\tjmp {}\n", label_done.clone()).as_str());
     program_string.push_str(format!("{}:\n", label_true).as_str());
     program_string.push_str(format!("\tmov {}, {}\n", prev_reg, short_circuit_op).as_str());
     program_string.push_str(format!("{}:\n", label_done).as_str());
@@ -526,7 +565,7 @@ fn equality_generator(program_string : &mut String, operator : &String, prev_reg
     program_string.push_str(format!("\tcmp {}, {}\n", prev_reg, next_reg).as_str());
     program_string.push_str(format!("\tje {}\n", label_equal.clone()).as_str());
     program_string.push_str(format!("\tmov {}, {}\n", prev_reg, short_circuit_op).as_str());
-    program_string.push_str(format!("\tje {}\n", label_done.clone()).as_str());
+    program_string.push_str(format!("\tjmp {}\n", label_done.clone()).as_str());
     program_string.push_str(format!("{}:\n", label_equal).as_str());
     program_string.push_str(format!("\tmov {}, {}\n", prev_reg, full_eval_op).as_str());
     program_string.push_str(format!("{}:\n", label_done).as_str());
