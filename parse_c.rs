@@ -37,7 +37,7 @@ x   expression -> identifier = expression
     bool_subterm -> [&& bool_factor bool_subterm] | empty
     bool_factor -> bool_operand bool_subfactor
     bool_subfactor -> [== | !=] bool_operand bool_subfactor | empty
-    bool_operand -> [! | empty] [identifier | keyword]
+    bool_operand -> [! bool_expr] | id | keyword
 
     statement -> ret_stmt
     ret_stmt -> keyword expression ;
@@ -646,6 +646,10 @@ fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
 
         current_node.children.push(bool_subexpr_node);
 
+        if current_node.children[0].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        }
+
         return true;
     }
 
@@ -664,6 +668,7 @@ fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
     let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
 
     if
+    "||" == tokens[get_current_token_index()].val &&
     parse(&mut operator_node, tokens, symbol_table) &&
     parse(&mut bool_term_node, tokens, symbol_table) &&
     parse(&mut bool_subexpr_node, tokens, symbol_table) {
@@ -672,6 +677,9 @@ fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
         current_node.children.push(operator_node);
         current_node.children.push(bool_term_node);
         current_node.children.push(bool_subexpr_node);
+
+        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
+        return true;
     }
     else if is_separator(&tokens[get_current_token_index()].val) {
         return true;
@@ -692,6 +700,10 @@ fn parse_bool_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
         current_node.children.push(bool_factor_node);
         current_node.children.push(bool_subterm_node);
 
+        if current_node.children[0].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        }
+
         return true;
     }
 
@@ -710,14 +722,18 @@ fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
     let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
 
     if
+    "&&" == tokens[get_current_token_index()].val &&
     parse(&mut operator_node, tokens, symbol_table) &&
     parse(&mut bool_factor_node, tokens, symbol_table) &&
     parse(&mut bool_subterm_node, tokens, symbol_table) {
-        //Or case is successful
+        //And case is successful
 
         current_node.children.push(operator_node);
         current_node.children.push(bool_factor_node);
         current_node.children.push(bool_subterm_node);
+
+        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
+        return true;
     }
     else if is_separator(&tokens[get_current_token_index()].val) {
         return true;
@@ -738,6 +754,10 @@ fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, sy
         current_node.children.push(bool_operand_node);
         current_node.children.push(bool_subfactor_node);
 
+        if current_node.children[0].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        }
+
         return true;
     }
 
@@ -756,14 +776,20 @@ fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<token_c::Token>,
     let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
 
     if
+    ("==" == tokens[get_current_token_index()].val ||
+    "!=" == tokens[get_current_token_index()].val) &&
     parse(&mut operator_node, tokens, symbol_table) &&
     parse(&mut bool_operand_node, tokens, symbol_table) &&
     parse(&mut bool_subfactor_node, tokens, symbol_table) {
-        //Or case is successful
+        //Equals/NotEquals case is successful
 
         current_node.children.push(operator_node);
         current_node.children.push(bool_operand_node);
         current_node.children.push(bool_subfactor_node);
+
+        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
+
+        return true
     }
     else if is_separator(&tokens[get_current_token_index()].val) {
         return true;
@@ -775,26 +801,23 @@ fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<token_c::Token>,
 fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     
     let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
 
     if 
     "!" == tokens[get_current_token_index()].val &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    (
-    parse(&mut identifier_node, tokens, symbol_table) ||
-    parse(&mut keyword_node, tokens, symbol_table)
-    ) {
+    parse(&mut bool_expr_node, tokens, symbol_table) {
+
         current_node.children.push(operator_node);
-        //Push the node that allowed for the parse to be succesful.
-        current_node.children.push(
-            if identifier_node.properties.contains_key("value") {
-                identifier_node
-            }
-            else {
-                keyword_node
-            }
-        )
+        current_node.children.push(bool_expr_node);
+
+        current_node.properties.insert("unary".to_string(), "!".to_string());
+        if current_node.children[1].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[1].properties["terminal"].clone());
+        }
+        return true;
     }
     else if 
     parse(&mut identifier_node, tokens, symbol_table) ||
@@ -807,7 +830,9 @@ fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
             else {
                 keyword_node
             }
-        )
+        );
+        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());
+        return true;
     }
 
     return false;
