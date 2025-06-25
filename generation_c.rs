@@ -38,7 +38,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
         }
-        NodeType::Expression => {
+        NodeType::Arith_Expr => {
 
             assert!(parse_tree.properties.contains_key("terminal"));
             let left_operand : String = parse_tree.properties["terminal"].clone();
@@ -69,7 +69,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             }
 
         }
-        NodeType::Subexpr => {
+        NodeType::Arith_Subexpr => {
             if parse_tree.properties.contains_key("operator") {
                 let operator : String = parse_tree.properties["operator"].clone();
 
@@ -99,7 +99,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             //TODO: Add terminal case for when subexprs end
         }
-        NodeType::Term => {
+        NodeType::Arith_Term => {
             
             assert!(parse_tree.properties.contains_key("terminal"));
             let left_operand : String = parse_tree.properties["terminal"].clone();
@@ -128,7 +128,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //Free allocated register
             }
         }
-        NodeType::Subterm => {
+        NodeType::Arith_Subterm => {
             if parse_tree.properties.contains_key("operator") {
                 let operator : String = parse_tree.properties["operator"].clone();
 
@@ -165,7 +165,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
             //TODO: Add terminal case for when factor_node end
         }
-        NodeType::Factor => {
+        NodeType::Arith_Factor => {
             let operand : String = parse_tree.properties["terminal"].clone();
             if is_identifier(&operand) {
 
@@ -289,30 +289,14 @@ impl RegisterManager {
     fn register_index(&self, register_name : &String) -> i32 {
         let name = register_name.as_str();
         match name {
-            "rbx" => {
-                0
-            }
-            "r10" => {
-                1
-            }
-            "r11" => {
-                2
-            }
-            "r12" => {
-                3
-            }
-            "r13" => {
-                4
-            }
-            "r14" => {
-                5
-            }
-            "r15" => {
-                6
-            }
-            _ => {
-                -1
-            }
+            "rbx" => 0,
+            "r10" => 1,
+            "r11" => 2,
+            "r12" => 3,
+            "r13" => 4,
+            "r14" => 5,
+            "r15" => 6,
+            _ => -1
         }
     }
 

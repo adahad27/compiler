@@ -37,7 +37,7 @@ x   expression -> identifier = expression
     bool_subterm -> [&& bool_factor bool_subterm] | empty
     bool_factor -> bool_operand bool_subfactor
     bool_subfactor -> [== | !=] bool_operand bool_subfactor | empty
-    bool_operand -> [! | empty] [identifier | constant]
+    bool_operand -> [! | empty] [identifier | keyword]
 
     statement -> ret_stmt
     ret_stmt -> keyword expression ;
@@ -140,11 +140,18 @@ pub enum NodeType {
     Primitive,
     Identifier,
     Body,
-    Expression,
-    Subexpr,
-    Term,
-    Subterm,
-    Factor,
+    Arith_Expr,
+    Arith_Subexpr,
+    Arith_Term,
+    Arith_Subterm,
+    Arith_Factor,
+    Bool_Expr,
+    Bool_Subexpr,
+    Bool_Term,
+    Bool_Subterm,
+    Bool_Factor,
+    Bool_Subfactor,
+    Bool_Operand,
     Statement,
     ReturnStatement,
     VarDecl,
@@ -198,20 +205,41 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
         NodeType::Body => {
             return parse_body(current_node, tokens, symbol_table);
         }
-        NodeType::Expression => {
-            return parse_expression(current_node, tokens, symbol_table)
+        NodeType::Arith_Expr => {
+            return parse_arith_expr(current_node, tokens, symbol_table)
         }
-        NodeType::Subexpr => {
-            return parse_subexpr(current_node, tokens, symbol_table)
+        NodeType::Arith_Subexpr => {
+            return parse_arith_subexpr(current_node, tokens, symbol_table)
         }
-        NodeType::Term => {
-            return parse_term(current_node, tokens, symbol_table);
+        NodeType::Arith_Term => {
+            return parse_arith_term(current_node, tokens, symbol_table);
         }
-        NodeType::Subterm => {
-            return parse_subterm(current_node, tokens, symbol_table)
+        NodeType::Arith_Subterm => {
+            return parse_arith_subterm(current_node, tokens, symbol_table)
         }
-        NodeType::Factor => {
-            return parse_factor(current_node, tokens, symbol_table);
+        NodeType::Arith_Factor => {
+            return parse_arith_factor(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Expr => {
+            return parse_bool_epxr(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Subexpr => {
+            return parse_bool_subepxr(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Term => {
+            return parse_bool_term(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Subterm => {
+            return parse_bool_subterm(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Factor => {
+            return parse_bool_factor(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Subfactor => {
+            return parse_bool_subfactor(current_node, tokens, symbol_table);
+        }
+        NodeType::Bool_Operand => {
+            return parse_bool_operand(current_node, tokens, symbol_table);
         }
         NodeType::Statement => {
             return parse_statement(current_node, tokens, symbol_table);            
@@ -354,7 +382,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         let mut operator_node : Node = create_node(NodeType::Operator);
-        let mut expression_node : Node = create_node(NodeType::Expression);
+        let mut arith_expr_node : Node = create_node(NodeType::Arith_Expr);
 
         if is_separator(&tokens[get_current_token_index()].val) {
             parse(&mut semicolon_node, tokens, symbol_table);
@@ -369,11 +397,11 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         else if is_operator(&tokens[get_current_token_index()].val) {
 
             parse(&mut operator_node, tokens, symbol_table);
-            parse(&mut expression_node, tokens, symbol_table);
+            parse(&mut arith_expr_node, tokens, symbol_table);
             parse(&mut semicolon_node, tokens, symbol_table);
 
             current_node.children.push(operator_node);
-            current_node.children.push(expression_node);
+            current_node.children.push(arith_expr_node);
             current_node.children.push(semicolon_node);
 
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
@@ -386,17 +414,17 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
     }
     else if parse(&mut identity_node, tokens, symbol_table) {
         let mut operator_node : Node = create_node(NodeType::Operator);
-        let mut expression_node : Node = create_node(NodeType::Expression);
+        let mut arith_expr_node : Node = create_node(NodeType::Arith_Expr);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
 
         if
         parse(&mut operator_node, tokens, symbol_table) &&
-        parse(&mut expression_node, tokens, symbol_table) &&
+        parse(&mut arith_expr_node, tokens, symbol_table) &&
         parse(&mut semicolon_node, tokens, symbol_table) {
             
             current_node.children.push(identity_node);
             current_node.children.push(operator_node);
-            current_node.children.push(expression_node);
+            current_node.children.push(arith_expr_node);
             
             current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
             current_node.children.push(semicolon_node);
@@ -410,18 +438,18 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
 fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
-    let mut expression_node : Node = create_node(NodeType::Expression);
+    let mut arith_expr_node : Node = create_node(NodeType::Arith_Expr);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
 
 
 
     if
     parse(&mut return_node, tokens, symbol_table) &&
-    parse(&mut expression_node, tokens, symbol_table) &&
+    parse(&mut arith_expr_node, tokens, symbol_table) &&
     parse(&mut semicolon_node, tokens, symbol_table) {
         
         current_node.children.push(return_node);
-        current_node.children.push(expression_node);
+        current_node.children.push(arith_expr_node);
         current_node.children.push(semicolon_node);
 
         return true;
@@ -450,23 +478,23 @@ fn parse_body(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_ta
     return true;
 }
 
-fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
 
-    let mut term_node : Node = create_node(NodeType::Term);
-    let mut subexpr_node : Node = create_node(NodeType::Subexpr);
+    let mut arith_term_node : Node = create_node(NodeType::Arith_Term);
+    let mut arith_subexpr_node : Node = create_node(NodeType::Arith_Subexpr);
 
 
     if 
-    parse(&mut term_node, tokens, symbol_table) && 
-    parse(&mut subexpr_node, tokens, symbol_table) {
+    parse(&mut arith_term_node, tokens, symbol_table) && 
+    parse(&mut arith_subexpr_node, tokens, symbol_table) {
 
-        current_node.children.push(term_node);
+        current_node.children.push(arith_term_node);
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         }
         
 
-        current_node.children.push(subexpr_node);
+        current_node.children.push(arith_subexpr_node);
         if current_node.children[1].properties.contains_key("operator") {
             current_node.properties.insert("operator".to_string(), current_node.children[1].properties["operator"].clone());
         }
@@ -475,35 +503,35 @@ fn parse_expression(current_node : &mut Node, tokens : &Vec<token_c::Token>, sym
     return false;
 }
 
-fn parse_subexpr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     /* 
     Production rules:
-    subexpr -> [+ term subexpr] | [- term subexpr] | term | empty
+    arith_subexpr -> [+ term arith_subexpr] | [- term arith_subexpr] | term | empty
      */
     let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut term_node : Node = create_node(NodeType::Term);
-    let mut subexpr_node : Node = create_node(NodeType::Subexpr);
+    let mut arith_term_node : Node = create_node(NodeType::Arith_Term);
+    let mut arith_subexpr_node : Node = create_node(NodeType::Arith_Subexpr);
 
     if 
     (tokens[get_current_token_index()].val == "+".to_string() ||
     tokens[get_current_token_index()].val == "-".to_string()) &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut term_node, tokens, symbol_table) &&
-    parse(&mut subexpr_node, tokens, symbol_table) {
+    parse(&mut arith_term_node, tokens, symbol_table) &&
+    parse(&mut arith_subexpr_node, tokens, symbol_table) {
         
         //First 2 rules + semantic checking
         current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
         current_node.children.push(operator_node);
 
-        current_node.children.push(term_node);
-        current_node.children.push(subexpr_node);
+        current_node.children.push(arith_term_node);
+        current_node.children.push(arith_subexpr_node);
 
         return true;
     }
-    else if parse(&mut term_node, tokens, symbol_table) {
+    else if parse(&mut arith_term_node, tokens, symbol_table) {
 
         //3rd rule
-        current_node.children.push(term_node);
+        current_node.children.push(arith_term_node);
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         return true;
     }
@@ -516,23 +544,23 @@ fn parse_subexpr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     return false;
 }
 
-fn parse_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arith_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     /* 
     Production rules:
-    term -> constant | identifier subterm
+    arith_term -> constant | identifier subarith_term
      */
 
-    let mut factor_node : Node = create_node(NodeType::Factor);
-    let mut subterm_node : Node = create_node(NodeType::Subterm);
+    let mut arith_factor_node : Node = create_node(NodeType::Arith_Factor);
+    let mut arith_subterm_node : Node = create_node(NodeType::Arith_Subterm);
 
     if 
-    parse(&mut factor_node, tokens, symbol_table)  && 
-    parse(&mut subterm_node, tokens, symbol_table){
+    parse(&mut arith_factor_node, tokens, symbol_table)  && 
+    parse(&mut arith_subterm_node, tokens, symbol_table){
         
-        current_node.children.push(factor_node);
+        current_node.children.push(arith_factor_node);
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
 
-        current_node.children.push(subterm_node);
+        current_node.children.push(arith_subterm_node);
         if current_node.children[1].properties.contains_key("operator") {
             current_node.properties.insert("operator".to_string(), current_node.children[1].properties["operator"].clone());
         }
@@ -542,35 +570,35 @@ fn parse_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_ta
     return false;
 }
 
-fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arith_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     /* 
     Production rules:
-    subterm -> [* factor subterm] | [/ factor subterm] | factor | empty
+    arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
      */
     let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut factor_node : Node = create_node(NodeType::Factor);
-    let mut subterm_node : Node = create_node(NodeType::Subterm);
+    let mut arith_factor_node : Node = create_node(NodeType::Arith_Factor);
+    let mut arith_subterm_node : Node = create_node(NodeType::Arith_Subterm);
     if 
     (tokens[get_current_token_index()].val == "*".to_string() ||
     tokens[get_current_token_index()].val == "/".to_string()) &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut factor_node, tokens, symbol_table) &&
-    parse(&mut subterm_node, tokens, symbol_table) {
+    parse(&mut arith_factor_node, tokens, symbol_table) &&
+    parse(&mut arith_subterm_node, tokens, symbol_table) {
         
         //First 2 rules + semantic checking
         
         current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
         current_node.children.push(operator_node);
 
-        current_node.children.push(factor_node);
-        current_node.children.push(subterm_node);
+        current_node.children.push(arith_factor_node);
+        current_node.children.push(arith_subterm_node);
 
         return true;
     }
-    else if parse(&mut factor_node, tokens, symbol_table) {
+    else if parse(&mut arith_factor_node, tokens, symbol_table) {
 
         //3rd rule
-        current_node.children.push(factor_node);
+        current_node.children.push(arith_factor_node);
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         return true;
     }
@@ -586,10 +614,10 @@ fn parse_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     return false;
 }
 
-fn parse_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
     /* 
     Production rules:
-    Factor -> constant | identifier | (expression)
+    Arith_Factor -> constant | identifier | (expression)
      */
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut constant_node : Node = create_node(NodeType::Constant);
@@ -600,6 +628,186 @@ fn parse_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_
         current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());
 
         return true;
+    }
+
+    return false;
+}
+
+fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut bool_term_node : Node = create_node(NodeType::Bool_Term);
+    let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
+
+    if
+    parse(&mut bool_term_node, tokens, symbol_table) &&
+    parse(&mut bool_subexpr_node, tokens, symbol_table) {
+
+        current_node.children.push(bool_term_node);
+
+        current_node.children.push(bool_subexpr_node);
+
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    /* 
+    Production rules:
+    bool_subexpr -> [|| bool_term bool_subexpr] | empty
+     */
+
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut bool_term_node : Node = create_node(NodeType::Bool_Term);
+    let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
+
+    if
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut bool_term_node, tokens, symbol_table) &&
+    parse(&mut bool_subexpr_node, tokens, symbol_table) {
+        //Or case is successful
+
+        current_node.children.push(operator_node);
+        current_node.children.push(bool_term_node);
+        current_node.children.push(bool_subexpr_node);
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_bool_term(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut bool_factor_node : Node = create_node(NodeType::Bool_Factor);
+    let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
+
+    if 
+    parse(&mut bool_factor_node, tokens, symbol_table) && 
+    parse(&mut bool_subterm_node, tokens, symbol_table) {
+        
+        current_node.children.push(bool_factor_node);
+        current_node.children.push(bool_subterm_node);
+
+        return true;
+    }
+
+
+    return false;
+}
+
+fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    bool_subterm -> [&& bool_factor bool_subterm] | empty
+     */
+
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut bool_factor_node : Node = create_node(NodeType::Bool_Factor);
+    let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
+
+    if
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut bool_factor_node, tokens, symbol_table) &&
+    parse(&mut bool_subterm_node, tokens, symbol_table) {
+        //Or case is successful
+
+        current_node.children.push(operator_node);
+        current_node.children.push(bool_factor_node);
+        current_node.children.push(bool_subterm_node);
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut bool_operand_node : Node = create_node(NodeType::Bool_Operand);
+    let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
+
+    if 
+    parse(&mut bool_operand_node, tokens, symbol_table) && 
+    parse(&mut bool_subfactor_node, tokens, symbol_table) {
+        
+        current_node.children.push(bool_operand_node);
+        current_node.children.push(bool_subfactor_node);
+
+        return true;
+    }
+
+
+    return false;
+}
+
+fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    /* 
+    Production rules:
+    bool_subfactor -> [[== | !=] bool_operand bool_subfactor] | empty
+     */
+
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut bool_operand_node : Node = create_node(NodeType::Bool_Operand);
+    let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
+
+    if
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut bool_operand_node, tokens, symbol_table) &&
+    parse(&mut bool_subfactor_node, tokens, symbol_table) {
+        //Or case is successful
+
+        current_node.children.push(operator_node);
+        current_node.children.push(bool_operand_node);
+        current_node.children.push(bool_subfactor_node);
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+
+    if 
+    "!" == tokens[get_current_token_index()].val &&
+    parse(&mut operator_node, tokens, symbol_table) &&
+    (
+    parse(&mut identifier_node, tokens, symbol_table) ||
+    parse(&mut keyword_node, tokens, symbol_table)
+    ) {
+        current_node.children.push(operator_node);
+        //Push the node that allowed for the parse to be succesful.
+        current_node.children.push(
+            if identifier_node.properties.contains_key("value") {
+                identifier_node
+            }
+            else {
+                keyword_node
+            }
+        )
+    }
+    else if 
+    parse(&mut identifier_node, tokens, symbol_table) ||
+    parse(&mut keyword_node, tokens, symbol_table) {
+        //Push the node that allowed for the parse to be succesful.
+        current_node.children.push(
+            if identifier_node.properties.contains_key("value") {
+                identifier_node
+            }
+            else {
+                keyword_node
+            }
+        )
     }
 
     return false;
