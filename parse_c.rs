@@ -835,7 +835,15 @@ fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
                 keyword_node
             }
         );
-        current_node.properties.insert("terminal".to_string(), current_node.children[current_node.children.len() - 1].properties["value"].clone());
+        let terminal : String;
+        if
+        current_node.children[current_node.children.len() - 1].properties["value"] == "false".to_string() {
+            terminal = "0".to_string();
+        }
+        else {
+            terminal = "1".to_string();
+        }
+        current_node.properties.insert("terminal".to_string(), terminal);
         return true;
     }
 

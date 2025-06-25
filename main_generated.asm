@@ -3,16 +3,16 @@ _start:
 	push rbp
 	mov rbp, rsp
 	push 0
-	mov qword rbx, true
+	mov qword rbx, 1
 	push 0
 	mov qword [rbp-16], rbx
-	mov qword r10, false
+	mov qword r10, 0
 	push 0
 	mov qword [rbp-24], r10
-	mov qword r11, true
-	mov qword r12, false
+	mov qword r11, 1
+	mov qword r12, 0
 	not r12
-	mov qword r13, false
+	mov qword r13, 0
 	cmp r12, 0
 	je .L1
 	cmp r13, 0
@@ -31,8 +31,8 @@ _start:
 .L3:
 	mov r11, 1
 .L4:
-	mov qword r14, true
-	mov qword r15, false
+	mov qword r14, 1
+	mov qword r15, 0
 	cmp r14, 0
 	je .L5
 	cmp r15, 0
