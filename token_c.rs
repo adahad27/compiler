@@ -57,7 +57,7 @@ pub fn is_operator(input : &String) -> bool {
 }
 
 pub fn is_identifier(input : &String) -> bool {
-    return input.chars().nth(0).unwrap().is_alphabetic();
+    return input.chars().nth(0).unwrap().is_alphabetic() && !is_keyword(input) && !is_primitive(input);
 }
 
 pub fn is_separator(input : &String) -> bool {

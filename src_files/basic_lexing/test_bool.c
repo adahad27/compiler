@@ -1,9 +1,9 @@
 int main() {
     bool x;
-    bool y;
-    bool z;
+    bool y = true;
+    bool z = false;
 
-    x = z || y;
+    x = true || !false && false || true && false;
 
     return y;
 }

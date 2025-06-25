@@ -65,7 +65,6 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 };
                 parse_tree.properties.insert("register".to_string(), result_reg);
                 //Free allocated register
-                fs::write("main_generated.asm", program_string).expect("Unable to write to file");
             }
 
         }
@@ -180,6 +179,154 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //Move it into a register
                 program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
 
+                parse_tree.properties.insert("register".to_string(), reg_name);
+            }
+        }
+        NodeType::Bool_Expr => {
+            assert!(parse_tree.properties.contains_key("terminal"));
+            let left_operand : String = parse_tree.properties["terminal"].clone();
+            if !is_identifier(&left_operand) {
+
+                let bool_term_node: &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, bool_term_node, symbol_table, register_manager);
+                let reg_name : String = bool_term_node.properties["register"].clone();
+
+
+                let bool_subexpr_node: &mut Node = &mut parse_tree.children[1];
+                bool_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+                generate_from_tree(program_string, bool_subexpr_node, symbol_table, register_manager);
+                
+                let result_reg : String = 
+                if parse_tree.children[1].properties.contains_key("register") {
+                    parse_tree.children[1].properties["register"].clone()
+                }
+                else {
+                    reg_name
+                };
+                parse_tree.properties.insert("register".to_string(), result_reg);
+
+            }
+        }
+        NodeType::Bool_Subexpr => {
+            if parse_tree.properties.contains_key("operator") {
+                let operator : String = parse_tree.properties["operator"].clone();
+
+                let bool_term_node : &mut Node = &mut parse_tree.children[1];
+                generate_from_tree(program_string, bool_term_node, symbol_table, register_manager);
+                let result_reg : String = bool_term_node.properties["register"].clone();
+
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+
+                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
+                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+
+                let bool_subexpr_node : &mut Node = &mut parse_tree.children[2];
+                generate_from_tree(program_string, bool_subexpr_node, symbol_table, register_manager);
+            }
+        }
+        NodeType::Bool_Term => {
+            assert!(parse_tree.properties.contains_key("terminal"));
+            let left_operand : String = parse_tree.properties["terminal"].clone();
+
+            if !is_identifier(&left_operand) {
+
+                let bool_factor_node: &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, bool_factor_node, symbol_table, register_manager);
+                let reg_name : String = bool_factor_node.properties["register"].clone();
+
+
+                let bool_subterm_node: &mut Node = &mut parse_tree.children[1];
+                bool_subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
+                generate_from_tree(program_string, bool_subterm_node, symbol_table, register_manager);
+                
+                let result_reg : String = 
+                if parse_tree.children[1].properties.contains_key("register") {
+                    parse_tree.children[1].properties["register"].clone()
+                }
+                else {
+                    reg_name
+                };
+                parse_tree.properties.insert("register".to_string(), result_reg);
+
+            }
+        }
+        NodeType::Bool_Subterm => {
+            if parse_tree.properties.contains_key("operator") {
+                let operator : String = parse_tree.properties["operator"].clone();
+
+                let bool_factor_node : &mut Node = &mut parse_tree.children[1];
+                generate_from_tree(program_string, bool_factor_node, symbol_table, register_manager);
+                let result_reg : String = bool_factor_node.properties["register"].clone();
+
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+
+                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
+                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+
+                let bool_subterm_node : &mut Node = &mut parse_tree.children[2];
+                generate_from_tree(program_string, bool_subterm_node, symbol_table, register_manager);
+            }
+        }
+        NodeType::Bool_Factor => {
+            assert!(parse_tree.properties.contains_key("terminal"));
+            let left_operand : String = parse_tree.properties["terminal"].clone();
+
+            if !is_identifier(&left_operand) {
+
+                let bool_operand_node: &mut Node = &mut parse_tree.children[0];
+                generate_from_tree(program_string, bool_operand_node, symbol_table, register_manager);
+                let reg_name : String = bool_operand_node.properties["register"].clone();
+
+
+                let bool_subfactor_node: &mut Node = &mut parse_tree.children[1];
+                bool_subfactor_node.properties.insert("prev_register".to_string(), reg_name.clone());
+                generate_from_tree(program_string, bool_subfactor_node, symbol_table, register_manager);
+                
+                let result_reg : String = 
+                if parse_tree.children[1].properties.contains_key("register") {
+                    parse_tree.children[1].properties["register"].clone()
+                }
+                else {
+                    reg_name
+                };
+                parse_tree.properties.insert("register".to_string(), result_reg);
+
+            }
+        }
+        NodeType::Bool_Subfactor => {
+            if parse_tree.properties.contains_key("operator") {
+                let operator : String = parse_tree.properties["operator"].clone();
+
+                let bool_operand_node : &mut Node = &mut parse_tree.children[1];
+                generate_from_tree(program_string, bool_operand_node, symbol_table, register_manager);
+                let result_reg : String = bool_operand_node.properties["register"].clone();
+
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+
+                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
+                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+
+                let bool_subfactor_node : &mut Node = &mut parse_tree.children[2];
+                generate_from_tree(program_string, bool_subfactor_node, symbol_table, register_manager);
+            }
+        }
+        NodeType::Bool_Operand => {
+            let operand : String = parse_tree.properties["terminal"].clone();
+            if is_identifier(&operand) {
+
+            }
+            else {
+                //Left operand is a constant
+
+                //Allocate register for it
+                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                let reg_name : String = register_manager.register_name(reg_index);
+                
+                //Move it into a register
+                program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
+                if parse_tree.properties.contains_key("unary") {
+                    program_string.push_str(format!("\tnot {}\n", reg_name).as_str());
+                }
                 parse_tree.properties.insert("register".to_string(), reg_name);
             }
         }
@@ -313,6 +460,10 @@ fn to_operator(operator : String) -> String {
         "-" => "sub".to_string(),
         "*" => "imul".to_string(),
         "/" => "idiv".to_string(),
+        "&&" => "and".to_string(),
+        "||" => "or".to_string(),
+        "==" => "cmp".to_string(),
+        "!=" => "cmp".to_string(),
 
         _ => "Error: Incorrect operator found".to_string()
     }
