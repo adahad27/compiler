@@ -6,7 +6,7 @@
 # already existing elements were commented out
 
 #/target
-test.rs
+test.*
 parse
 main
 test

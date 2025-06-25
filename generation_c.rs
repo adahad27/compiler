@@ -4,7 +4,7 @@ it will combine both the intermediate and target code generation into one unit o
 logic
 */
 
-use std::fs;
+use std::{fs, result};
 
 use crate::{parse_c::{create_node, Node, NodeType, STManager}, token_c::is_identifier};
 
@@ -215,8 +215,8 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 generate_from_tree(program_string, bool_term_node, symbol_table, register_manager);
                 let result_reg : String = bool_term_node.properties["register"].clone();
 
-                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
-
+                and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
+                
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
 
@@ -258,7 +258,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 generate_from_tree(program_string, bool_factor_node, symbol_table, register_manager);
                 let result_reg : String = bool_factor_node.properties["register"].clone();
 
-                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+                and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
 
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
@@ -479,4 +479,40 @@ fn label_create() -> u32 {
 
 fn label_name(index : u32)->String {
     return format!(".L{}", index);
+}
+
+fn and_or_generator(program_string : &mut String, operator : &String, prev_reg : &String, next_reg : &String) {
+    
+    let label_true: String = label_name(label_create());
+    let label_done : String = label_name(label_create());
+
+    let short_circuit_op : String;
+    let full_eval_op : String;
+    if operator == "||" {
+        short_circuit_op = "1".to_string();
+        full_eval_op = "0".to_string();
+    }
+    else {
+        short_circuit_op = "0".to_string();
+        full_eval_op = "1".to_string();
+    }
+    
+
+    program_string.push_str(format!("\tcmp {}, {}\n", prev_reg, short_circuit_op).as_str());    
+    
+    program_string.push_str(format!("\tje {}\n", label_true.clone()).as_str());
+
+    program_string.push_str(format!("\tcmp {}, {}\n", next_reg, short_circuit_op).as_str());
+
+    program_string.push_str(format!("\tje {}\n", label_true.clone()).as_str());
+
+    program_string.push_str(format!("\tmov {}, {}\n", prev_reg, full_eval_op).as_str());
+
+    program_string.push_str(format!("\tje {}\n", label_done.clone()).as_str());
+
+    program_string.push_str(format!("{}:\n", label_true).as_str());
+
+    program_string.push_str(format!("\tmov {}, {}\n", prev_reg, short_circuit_op).as_str());
+
+    program_string.push_str(format!("{}:\n", label_done).as_str());
 }
