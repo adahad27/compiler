@@ -41,6 +41,19 @@ x   expression -> identifier = expression
 
     relational_expr -> arith_expr [< | <= | > | >=] arith_expr
 
+
+    statement -> while_statement
+    while_statement -> keyword (condition_expr){body}
+    condition_expr -> bool_expr | relational_expr
+
+    statement -> for_statement
+    for_statement -> keyword (var_decl ; condition_expr ; var_decl) {body}
+
+    statement -> if_stmt
+    if_stmt -> keyword (condition_expr){body} elif_stmt else_stmt
+    elif_stmt -> [keyword(condition_expr){body} elif_stmt] | empty
+    else_stmt -> [keyword {body}] | empty
+
     statement -> ret_stmt
     ret_stmt -> keyword expression ;
 */
@@ -142,6 +155,7 @@ pub enum NodeType {
     Primitive,
     Identifier,
     Body,
+    Condition_Expr,
     Arith_Expr,
     Arith_Subexpr,
     Arith_Term,
@@ -156,7 +170,10 @@ pub enum NodeType {
     Bool_Operand,
     Relational_Expr,
     Statement,
-    ReturnStatement,
+    If_Stmt,
+    Elif_Stmt,
+    Else_Stmt,
+    Return_Stmt,
     VarDecl,
     Keyword,
     Constant,
@@ -247,14 +264,26 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
         NodeType::Relational_Expr => {
             return parse_relational_expr(current_node, tokens, symbol_table);
         }
+        NodeType::Condition_Expr => {
+            return parse_cond_expr(current_node, tokens, symbol_table);
+        }
         NodeType::Statement => {
             return parse_statement(current_node, tokens, symbol_table);            
         }
         NodeType::VarDecl => {
             return parse_var_decl(current_node, tokens, symbol_table);
         }
-        NodeType::ReturnStatement => {
+        NodeType::Return_Stmt => {
             return parse_ret_stmt(current_node, tokens, symbol_table);
+        }
+        NodeType::If_Stmt => {
+            return parse_if_stmt(current_node, tokens, symbol_table);
+        }
+        NodeType::Elif_Stmt => {
+            return parse_elif_stmt(current_node, tokens, symbol_table);
+        }
+        NodeType::Else_Stmt => {
+            return parse_else_stmt(current_node, tokens, symbol_table);
         }
         NodeType::Keyword => {
             return parse_terminal(current_node, tokens, &token_c::TokenType::Keyword);
@@ -346,7 +375,7 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
 
     /* Include all rules for CFGs that have statements on the LHS here. */
     if tokens[get_current_token_index()].val == "return".to_string() {
-        let mut return_node : Node = create_node(NodeType::ReturnStatement);
+        let mut return_node : Node = create_node(NodeType::Return_Stmt);
 
         if parse(&mut return_node, tokens, symbol_table) 
         {
@@ -387,12 +416,19 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
 
     if 
-    parse(&mut primitive_node, tokens, symbol_table) && parse(&mut identity_node, tokens, symbol_table)
-    {
+    parse(&mut primitive_node, tokens, symbol_table) && parse(&mut identity_node, tokens, symbol_table) {
         
         current_node.children.push(primitive_node);
         current_node.children.push(identity_node);
         
+        if current_node.children[1].properties["value"] == "int".to_string() {
+            expr_node = create_node(NodeType::Arith_Expr);
+        }
+        else if current_node.children[1].properties["value"] == "bool".to_string() {
+            expr_node = create_node(NodeType::Arith_Expr);
+        }
+
+
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         let mut operator_node : Node = create_node(NodeType::Operator);
 
@@ -427,6 +463,13 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         let mut operator_node : Node = create_node(NodeType::Operator);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         
+        if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
+            expr_node = create_node(NodeType::Arith_Expr);
+        }
+        else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+            expr_node = create_node(NodeType::Arith_Expr);
+        }
+
         if
         parse(&mut operator_node, tokens, symbol_table) &&
         parse(&mut expr_node, tokens, symbol_table) &&
@@ -876,6 +919,131 @@ fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>
 
         return true;
     }
+
+    return false;
+}
+
+fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut cond_node : Node = create_node(NodeType::Condition_Expr);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+    let mut open_curly_node : Node = create_node(NodeType::Separator);
+    let mut body_node : Node = create_node(NodeType::Body);
+    let mut close_curly_node : Node = create_node(NodeType::Separator);
+    let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
+    let mut else_stmt_node : Node = create_node(NodeType::Else_Stmt);
+
+    if 
+    parse(&mut keyword_node, tokens, symbol_table) &&
+    parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut cond_node, tokens, symbol_table) &&
+    parse(&mut close_paren_node, tokens, symbol_table) &&
+    parse(&mut open_curly_node, tokens, symbol_table) &&
+    parse(&mut body_node, tokens, symbol_table) &&
+    parse(&mut close_curly_node, tokens, symbol_table) &&
+    parse(&mut elif_stmt_node, tokens, symbol_table) &&
+    parse(&mut else_stmt_node, tokens, symbol_table) {
+        
+        current_node.children.push(keyword_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(cond_node);
+        current_node.children.push(close_paren_node);
+        current_node.children.push(open_curly_node);
+        current_node.children.push(body_node);
+        current_node.children.push(close_curly_node);
+        current_node.children.push(elif_stmt_node);
+        current_node.children.push(else_stmt_node);
+
+        return true;
+
+    }
+
+    return false;
+}
+
+fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    if tokens[get_current_token_index()].val == "elif".to_string() {
+        let mut keyword_node : Node = create_node(NodeType::Keyword);
+        let mut open_paren_node : Node = create_node(NodeType::Separator);
+        let mut cond_node : Node = create_node(NodeType::Condition_Expr);
+        let mut close_paren_node : Node = create_node(NodeType::Separator);
+        let mut open_curly_node : Node = create_node(NodeType::Separator);
+        let mut body_node : Node = create_node(NodeType::Body);
+        let mut close_curly_node : Node = create_node(NodeType::Separator);
+        let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
+        
+        if 
+        parse(&mut keyword_node, tokens, symbol_table) &&
+        parse(&mut open_paren_node, tokens, symbol_table) &&
+        parse(&mut cond_node, tokens, symbol_table) &&
+        parse(&mut close_paren_node, tokens, symbol_table) &&
+        parse(&mut open_curly_node, tokens, symbol_table) &&
+        parse(&mut body_node, tokens, symbol_table) &&
+        parse(&mut close_curly_node, tokens, symbol_table) &&
+        parse(&mut elif_stmt_node, tokens, symbol_table) {
+
+            current_node.children.push(keyword_node);
+            current_node.children.push(open_paren_node);
+            current_node.children.push(cond_node);
+            current_node.children.push(close_paren_node);
+            current_node.children.push(open_curly_node);
+            current_node.children.push(body_node);
+            current_node.children.push(close_curly_node);
+            current_node.children.push(elif_stmt_node);
+
+            return true;
+        }
+        return false;
+    }
+
+    return true;
+}
+
+fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    if tokens[get_current_token_index()].val == "else".to_string() {
+        let mut keyword_node : Node = create_node(NodeType::Keyword);
+        let mut open_curly_node : Node = create_node(NodeType::Separator);
+        let mut body_node : Node = create_node(NodeType::Body);
+        let mut close_curly_node : Node = create_node(NodeType::Separator);
+
+        if 
+        parse(&mut keyword_node, tokens, symbol_table) &&
+        parse(&mut open_curly_node, tokens, symbol_table) &&
+        parse(&mut body_node, tokens, symbol_table) &&
+        parse(&mut close_curly_node, tokens, symbol_table) {
+
+
+            current_node.children.push(keyword_node);
+            current_node.children.push(open_curly_node);
+            current_node.children.push(body_node);
+            current_node.children.push(close_curly_node);
+
+            return true;
+
+        }
+        return false;
+    }
+
+    return true;
+}
+
+fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
+    let mut rel_expr_node : Node = create_node(NodeType::Relational_Expr);
+
+    if parse(&mut bool_expr_node, tokens, symbol_table) {
+        //We have a boolean expression
+        current_node.children.push(bool_expr_node);
+        return true;
+    }
+    else if parse(&mut rel_expr_node, tokens, symbol_table) {
+        //We have a relational expression
+        current_node.children.push(rel_expr_node);
+        return true;
+    }
+
 
     return false;
 }

@@ -75,7 +75,7 @@ pub fn is_separator(input : &String) -> bool {
 fn is_keyword(input : &String) -> bool {
     if 
     input == "if" ||
-    input == "else if" ||
+    input == "elif" ||
     input == "else" ||
     input == "while" ||
     input == "for" ||

@@ -377,7 +377,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             }
             
         }
-        NodeType::ReturnStatement => {
+        NodeType::Return_Stmt => {
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             if parse_tree.children[1].properties.contains_key("terminal") {
                 let operand : String = parse_tree.children[1].properties["terminal"].clone();
