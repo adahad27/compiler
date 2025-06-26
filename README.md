@@ -10,3 +10,5 @@ Features of <C (either already implemented or planned):
 1. Support for int, bool, and char primitive types
 2. Support for arithmetic, boolean, and relational operators
 3. Support for conditional and loop statements
+4. Function declarations, definitions, and calls
+

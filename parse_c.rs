@@ -50,8 +50,8 @@ x   expression -> identifier = expression
     for_statement -> keyword (var_decl ; condition_expr ; var_decl) {body}
 
     statement -> if_stmt
-    if_stmt -> keyword (condition_expr){body} elif_stmt else_stmt
-    elif_stmt -> [keyword(condition_expr){body} elif_stmt] | empty
+    if_stmt -> keyword (condition_expr){body} elif_stmt
+    elif_stmt -> [keyword(condition_expr){body} elif_stmt] | else_stmt |empty
     else_stmt -> [keyword {body}] | empty
 
     statement -> ret_stmt
@@ -202,100 +202,64 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
 
     match current_node.node_type {
 
-        NodeType::Program_Start => {
-            return parse_start_node(current_node, tokens, symbol_table);
-        }
+        NodeType::Program_Start => parse_start_node(current_node, tokens, symbol_table),
         
-        NodeType::Function_Declaration => {
-            return parse_func_decl(current_node, tokens, symbol_table);
-        }
+        NodeType::Function_Declaration => parse_func_decl(current_node, tokens, symbol_table),
 
-        NodeType::Primitive => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Primitive);
-        }
+        NodeType::Primitive => parse_terminal(current_node, tokens, &token_c::TokenType::Primitive),
 
-        NodeType::Identifier => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Identifier);
-        }
+        NodeType::Identifier => parse_terminal(current_node, tokens, &token_c::TokenType::Identifier),
 
-        NodeType::Separator => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Separator);
-        }
+        NodeType::Separator => parse_terminal(current_node, tokens, &token_c::TokenType::Separator),
 
-        NodeType::Body => {
-            return parse_body(current_node, tokens, symbol_table);
-        }
-        NodeType::Arith_Expr => {
-            return parse_arith_expr(current_node, tokens, symbol_table)
-        }
-        NodeType::Arith_Subexpr => {
-            return parse_arith_subexpr(current_node, tokens, symbol_table)
-        }
-        NodeType::Arith_Term => {
-            return parse_arith_term(current_node, tokens, symbol_table);
-        }
-        NodeType::Arith_Subterm => {
-            return parse_arith_subterm(current_node, tokens, symbol_table)
-        }
-        NodeType::Arith_Factor => {
-            return parse_arith_factor(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Expr => {
-            return parse_bool_epxr(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Subexpr => {
-            return parse_bool_subepxr(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Term => {
-            return parse_bool_term(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Subterm => {
-            return parse_bool_subterm(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Factor => {
-            return parse_bool_factor(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Subfactor => {
-            return parse_bool_subfactor(current_node, tokens, symbol_table);
-        }
-        NodeType::Bool_Operand => {
-            return parse_bool_operand(current_node, tokens, symbol_table);
-        }
-        NodeType::Relational_Expr => {
-            return parse_relational_expr(current_node, tokens, symbol_table);
-        }
-        NodeType::Condition_Expr => {
-            return parse_cond_expr(current_node, tokens, symbol_table);
-        }
-        NodeType::Statement => {
-            return parse_statement(current_node, tokens, symbol_table);            
-        }
-        NodeType::VarDecl => {
-            return parse_var_decl(current_node, tokens, symbol_table);
-        }
-        NodeType::Return_Stmt => {
-            return parse_ret_stmt(current_node, tokens, symbol_table);
-        }
-        NodeType::If_Stmt => {
-            return parse_if_stmt(current_node, tokens, symbol_table);
-        }
-        NodeType::Elif_Stmt => {
-            return parse_elif_stmt(current_node, tokens, symbol_table);
-        }
-        NodeType::Else_Stmt => {
-            return parse_else_stmt(current_node, tokens, symbol_table);
-        }
-        NodeType::Keyword => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Keyword);
-        }
-        NodeType::Operator => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Operator);
-        }
-        NodeType::Constant => {
-            return parse_terminal(current_node, tokens, &token_c::TokenType::Constant);
-        }
+        NodeType::Body => parse_body(current_node, tokens, symbol_table),
 
+        NodeType::Arith_Expr => parse_arith_expr(current_node, tokens, symbol_table),
 
+        NodeType::Arith_Subexpr => parse_arith_subexpr(current_node, tokens, symbol_table),
+
+        NodeType::Arith_Term => parse_arith_term(current_node, tokens, symbol_table),
+
+        NodeType::Arith_Subterm => parse_arith_subterm(current_node, tokens, symbol_table),
+
+        NodeType::Arith_Factor => parse_arith_factor(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Expr => parse_bool_epxr(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Subexpr => parse_bool_subepxr(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Term => parse_bool_term(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Subterm => parse_bool_subterm(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Factor => parse_bool_factor(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Subfactor => parse_bool_subfactor(current_node, tokens, symbol_table),
+
+        NodeType::Bool_Operand => parse_bool_operand(current_node, tokens, symbol_table),
+
+        NodeType::Relational_Expr => parse_relational_expr(current_node, tokens, symbol_table),
+
+        NodeType::Condition_Expr => parse_cond_expr(current_node, tokens, symbol_table),
+
+        NodeType::Statement => parse_statement(current_node, tokens, symbol_table),
+
+        NodeType::VarDecl => parse_var_decl(current_node, tokens, symbol_table),
+
+        NodeType::Return_Stmt => parse_ret_stmt(current_node, tokens, symbol_table),
+
+        NodeType::If_Stmt => parse_if_stmt(current_node, tokens, symbol_table),
+
+        NodeType::Elif_Stmt => parse_elif_stmt(current_node, tokens, symbol_table),
+
+        NodeType::Else_Stmt => parse_else_stmt(current_node, tokens, symbol_table),
+
+        NodeType::Keyword => parse_terminal(current_node, tokens, &token_c::TokenType::Keyword),
+
+        NodeType::Operator => parse_terminal(current_node, tokens, &token_c::TokenType::Operator),
+
+        NodeType::Constant => parse_terminal(current_node, tokens, &token_c::TokenType::Constant)
+    
     }
 
 
@@ -932,7 +896,6 @@ fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     let mut body_node : Node = create_node(NodeType::Body);
     let mut close_curly_node : Node = create_node(NodeType::Separator);
     let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
-    let mut else_stmt_node : Node = create_node(NodeType::Else_Stmt);
 
     if 
     parse(&mut keyword_node, tokens, symbol_table) &&
@@ -942,8 +905,7 @@ fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
     parse(&mut open_curly_node, tokens, symbol_table) &&
     parse(&mut body_node, tokens, symbol_table) &&
     parse(&mut close_curly_node, tokens, symbol_table) &&
-    parse(&mut elif_stmt_node, tokens, symbol_table) &&
-    parse(&mut else_stmt_node, tokens, symbol_table) {
+    parse(&mut elif_stmt_node, tokens, symbol_table) {
         
         current_node.children.push(keyword_node);
         current_node.children.push(open_paren_node);
@@ -953,7 +915,6 @@ fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol
         current_node.children.push(body_node);
         current_node.children.push(close_curly_node);
         current_node.children.push(elif_stmt_node);
-        current_node.children.push(else_stmt_node);
 
         return true;
 
@@ -992,6 +953,15 @@ fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
             current_node.children.push(close_curly_node);
             current_node.children.push(elif_stmt_node);
 
+            return true;
+        }
+        return false;
+    }
+    else if tokens[get_current_token_index()].val == "else".to_string() {
+        let mut else_stmt_node : Node = create_node(NodeType::Else_Stmt);
+
+        if parse(&mut else_stmt_node, tokens, symbol_table) {
+            current_node.children.push(else_stmt_node);
             return true;
         }
         return false;

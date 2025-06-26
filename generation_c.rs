@@ -357,6 +357,48 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             parse_tree.properties.insert("register".to_string(), left_reg);
             
         }
+        NodeType::Condition_Expr => {
+            let expr_node : &mut Node = &mut parse_tree.children[0];
+
+            generate_from_tree(program_string, expr_node, symbol_table, register_manager);
+
+            parse_tree.properties.insert("register".to_string(), expr_node.properties["register"].clone());
+
+        }
+        NodeType::If_Stmt => {
+
+            let cond_expr : &mut Node = &mut parse_tree.children[2];
+            generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
+            let cond_reg : String = cond_expr.properties["register"].clone();
+
+            let end_label : String = label_name(label_create());
+            let mut next_label : String = end_label.clone();
+
+            let elif_stmt : &mut Node = &mut parse_tree.children[7];
+
+            if elif_stmt.children.len() > 0 {
+                next_label = label_name(label_create());
+            }
+            
+
+            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}", next_label).as_str());
+
+            //Generate code for body and extra statement to allow jumping to end
+            let body : &mut Node = &mut parse_tree.children[5];
+            generate_from_tree(program_string, body, symbol_table, register_manager);
+            program_string.push_str(format!("\tjmp {}", end_label).as_str());
+
+            
+            let elif_stmt : &mut Node = &mut parse_tree.children[7];
+            //Pass end label to elif and else statements to make sure they can also jump to end
+            elif_stmt.properties.insert("end_label".to_string(), end_label.clone());
+            //Generate code for elif and else statements
+            generate_from_tree(program_string, elif_stmt, symbol_table, register_manager);
+
+            //Generate the actual end label
+            program_string.push_str(format!("{}:\n", end_label).as_str());
+        }
         NodeType::VarDecl => {            
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);
