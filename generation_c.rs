@@ -381,13 +381,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             }
             
 
-            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
-            program_string.push_str(format!("\tje {}", next_label).as_str());
+            program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}\n", next_label).as_str());
 
             //Generate code for body and extra statement to allow jumping to end
             let body : &mut Node = &mut parse_tree.children[5];
             generate_from_tree(program_string, body, symbol_table, register_manager);
-            program_string.push_str(format!("\tjmp {}", end_label).as_str());
+            program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
             program_string.push_str(format!("{}:\n", next_label).as_str());
             
             let elif_stmt : &mut Node = &mut parse_tree.children[7];
@@ -407,7 +407,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 else_stmt.properties.insert("end_label".to_string(), parse_tree.properties["end_label"].clone());
                 generate_from_tree(program_string, else_stmt, symbol_table, register_manager);
             }
-            else {
+            else if parse_tree.children.len() > 1{
                 let cond_expr : &mut Node = &mut parse_tree.children[2];
                 generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
                 let cond_reg : String = cond_expr.properties["register"].clone();
@@ -422,13 +422,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 }
                 
 
-                program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
-                program_string.push_str(format!("\tje {}", next_label).as_str());
+                program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
+                program_string.push_str(format!("\tje {}\n", next_label).as_str());
                 
                 //Generate code for body and extra statement to allow jumping to end
                 let body : &mut Node = &mut parse_tree.children[5];
                 generate_from_tree(program_string, body, symbol_table, register_manager);
-                program_string.push_str(format!("\tjmp {}", end_label).as_str());
+                program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
                 program_string.push_str(format!("{}:\n", next_label).as_str());
                 
                 let elif_stmt : &mut Node = &mut parse_tree.children[7];

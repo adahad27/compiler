@@ -5,5 +5,5 @@ int main() {
 
     x = true || !false && false || true && false;
 
-    return y;
+    return x;
 }

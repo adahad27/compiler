@@ -366,6 +366,17 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
         }
         
     }
+    else if tokens[get_current_token_index()].val == "if".to_string() {
+        let mut if_stmt : Node = create_node(NodeType::If_Stmt);
+        if parse(&mut if_stmt, tokens, symbol_table) 
+        {
+            current_node.children.push(if_stmt);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
     return false;
 }
 
@@ -385,11 +396,11 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         current_node.children.push(primitive_node);
         current_node.children.push(identity_node);
         
-        if current_node.children[1].properties["value"] == "int".to_string() {
+        if current_node.children[0].properties["value"] == "int".to_string() {
             expr_node = create_node(NodeType::Arith_Expr);
         }
-        else if current_node.children[1].properties["value"] == "bool".to_string() {
-            expr_node = create_node(NodeType::Arith_Expr);
+        else if current_node.children[0].properties["value"] == "bool".to_string() {
+            expr_node = create_node(NodeType::Condition_Expr);
         }
 
 
@@ -431,7 +442,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             expr_node = create_node(NodeType::Arith_Expr);
         }
         else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
-            expr_node = create_node(NodeType::Arith_Expr);
+            expr_node = create_node(NodeType::Condition_Expr);
         }
 
         if
@@ -481,7 +492,6 @@ fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 fn parse_body(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) ->bool {
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
-        
         if parse(&mut stmt_node, tokens, symbol_table)                 
         {
             current_node.children.push(stmt_node);
@@ -839,7 +849,6 @@ fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
         current_node.properties.insert("unary".to_string(), "!".to_string());
     }
     if 
-    parse(&mut identifier_node, tokens, symbol_table) ||
     parse(&mut keyword_node, tokens, symbol_table) {
         //Push the node that allowed for the parse to be succesful.
         current_node.children.push(

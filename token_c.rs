@@ -168,7 +168,9 @@ pub fn lex_file(input : String) -> Vec<Token> {
         (character.to_string() == "=" && it.peek().unwrap().to_string() == "=") ||
         (character.to_string() == "!" && it.peek().unwrap().to_string() == "=") ||
         (character.to_string() == "&" && it.peek().unwrap().to_string() == "&") ||
-        (character.to_string() == "|" && it.peek().unwrap().to_string() == "|") {
+        (character.to_string() == "|" && it.peek().unwrap().to_string() == "|") ||
+        (character.to_string() == "<" && it.peek().unwrap().to_string() == "=") ||
+        (character.to_string() == ">" && it.peek().unwrap().to_string() == "=") {
             if current_token_val != "".to_string() {
                 token_vector.push(construct_token(&current_token_val));
             }

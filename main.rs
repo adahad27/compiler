@@ -14,7 +14,10 @@ fn main() {
 
     let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), ordinal : 1};
     
-    let token_list : Vec<Token> = lex("src_files/feature_testing/test_relational.c");
+    let path : String = "src_files/feature_testing/".to_string();
+    let file : String = "test_bool.c".to_string();
+
+    let token_list : Vec<Token> = lex("src_files/feature_testing/test_if_elif_else.c");
 
     // print_tokens(&token_list);
 
@@ -23,6 +26,7 @@ fn main() {
     if parse(&mut current_node, &token_list, &mut  symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
+        // let filename : String = "src_files/feature_testing/test_relational.asm".to_string();
         generate_code(&filename, &mut current_node, &mut symbol_table);
     }
     else {

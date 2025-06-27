@@ -1,17 +1,15 @@
-#include <stdbool.h>
 int main() {
     bool x = false;
-    bool y = false;
 
-    if(x) {
-        return 4;
+    if(false) {
+        x = false;
     }
-    else if(y) {
-        return 5;
+    elif(true){
+        x = true;
     }
-    else{
-        return 6;
+    else {
+        x = false;
     }
 
-    return 0;
+    return x;
 }

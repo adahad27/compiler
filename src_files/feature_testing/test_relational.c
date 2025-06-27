@@ -1,5 +1,7 @@
 int main() {
-    bool z = 3 < 4;
+    bool z = 4 <= 4;
+    z = 4 >= 4;
+    z = 4 < 4;
 
-    return 0;
+    return z;
 }
