@@ -46,8 +46,11 @@ x   expression -> identifier = expression
     while_statement -> keyword (condition_expr){body}
     condition_expr -> bool_expr | relational_expr
 
+
+    optional_expr -> arith_expr | condition_expr | empty
+
     statement -> for_statement
-    for_statement -> keyword (var_decl ; condition_expr ; var_decl) {body}
+    for_statement -> keyword (optional_expr ; optional_expr ; optional_expr) {body}
 
     statement -> if_stmt
     if_stmt -> keyword (condition_expr){body} elif_stmt
@@ -155,6 +158,7 @@ pub enum NodeType {
     Primitive,
     Identifier,
     Body,
+    Optional_Expr,
     Condition_Expr,
     Arith_Expr,
     Arith_Subexpr,
@@ -173,6 +177,8 @@ pub enum NodeType {
     If_Stmt,
     Elif_Stmt,
     Else_Stmt,
+    While_Stmt,
+    For_Stmt,
     Return_Stmt,
     VarDecl,
     Keyword,
@@ -242,6 +248,8 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
 
         NodeType::Condition_Expr => parse_cond_expr(current_node, tokens, symbol_table),
 
+        NodeType::Optional_Expr => parse_optional_expr(current_node, tokens, symbol_table),
+
         NodeType::Statement => parse_statement(current_node, tokens, symbol_table),
 
         NodeType::VarDecl => parse_var_decl(current_node, tokens, symbol_table),
@@ -253,6 +261,10 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
         NodeType::Elif_Stmt => parse_elif_stmt(current_node, tokens, symbol_table),
 
         NodeType::Else_Stmt => parse_else_stmt(current_node, tokens, symbol_table),
+
+        NodeType::While_Stmt => parse_while_stmt(current_node, tokens, symbol_table),
+
+        NodeType::For_Stmt => parse_for_stmt(current_node, tokens, symbol_table),
 
         NodeType::Keyword => parse_terminal(current_node, tokens, &token_c::TokenType::Keyword),
 
@@ -1023,6 +1035,112 @@ fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
         return true;
     }
 
+
+    return false;
+}
+
+fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut cond_node : Node = create_node(NodeType::Condition_Expr);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+    let mut open_curly_node : Node = create_node(NodeType::Separator);
+    let mut body_node : Node = create_node(NodeType::Body);
+    let mut close_curly_node : Node = create_node(NodeType::Separator);
+
+    if 
+    parse(&mut keyword_node, tokens, symbol_table) &&
+    parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut cond_node, tokens, symbol_table) &&
+    parse(&mut close_paren_node, tokens, symbol_table) &&
+    parse(&mut open_curly_node, tokens, symbol_table) &&
+    parse(&mut body_node, tokens, symbol_table) &&
+    parse(&mut close_curly_node, tokens, symbol_table) {
+
+        current_node.children.push(keyword_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(cond_node);
+        current_node.children.push(close_paren_node);
+        current_node.children.push(open_curly_node);
+        current_node.children.push(body_node);
+        current_node.children.push(close_curly_node);
+
+        return true;
+    }
+
+
+    return false;
+}
+
+fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    /* This is the structure of a for loop:
+    for(init_expr ; expr ; next_expr) {
+        body
+    }
+    init_expr and next_expr can both be empty.
+    If expr is left empty, it is assumed to be true.
+     */
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut optional_1_node : Node = create_node(NodeType::Optional_Expr);
+    let mut semicolon_1_node : Node = create_node(NodeType::Separator);
+    let mut optional_2_node : Node = create_node(NodeType::Optional_Expr);
+    let mut semicolon_2_node : Node = create_node(NodeType::Separator);
+    let mut optional_3_node : Node = create_node(NodeType::Optional_Expr);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+    let mut open_curly_node : Node = create_node(NodeType::Separator);
+    let mut body_node : Node = create_node(NodeType::Body);
+    let mut close_curly_node : Node = create_node(NodeType::Separator);
+
+
+    if 
+    parse(&mut keyword_node, tokens, symbol_table) &&
+    parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut optional_1_node, tokens, symbol_table) &&
+    parse(&mut semicolon_1_node, tokens, symbol_table) &&
+    parse(&mut optional_2_node, tokens, symbol_table) &&
+    parse(&mut semicolon_2_node, tokens, symbol_table) &&
+    parse(&mut optional_3_node, tokens, symbol_table) &&
+    parse(&mut close_paren_node, tokens, symbol_table) &&
+    parse(&mut open_curly_node, tokens, symbol_table) &&
+    parse(&mut body_node, tokens, symbol_table) &&
+    parse(&mut close_curly_node, tokens, symbol_table) {
+        
+        current_node.children.push(keyword_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(optional_1_node);
+        current_node.children.push(semicolon_1_node);
+        current_node.children.push(optional_2_node);
+        current_node.children.push(semicolon_2_node);
+        current_node.children.push(optional_3_node);
+        current_node.children.push(close_paren_node);
+        current_node.children.push(open_curly_node);
+        current_node.children.push(body_node);
+        current_node.children.push(close_curly_node);
+
+
+    }
+
+    return false;
+}
+
+fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut arith_expr : Node = create_node(NodeType::Arith_Expr);
+    let mut conditional_expr : Node = create_node(NodeType::Condition_Expr);
+
+    if parse(&mut arith_expr, tokens, symbol_table) {
+        current_node.children.push(arith_expr);
+        return true;
+    }
+    else if parse(&mut conditional_expr, tokens, symbol_table) {
+        current_node.children.push(conditional_expr);
+        return true;
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
 
     return false;
 }
