@@ -104,6 +104,14 @@ fn next_token_index() -> usize {
     
 }
 
+fn prev_token_index() -> usize {
+    unsafe {
+        CURRENT_TOKEN_INDEX -= 1;
+        return CURRENT_TOKEN_INDEX as usize;
+    }
+    
+}
+
 
 pub struct Symbol {
     pub primitive : String, 
@@ -121,7 +129,7 @@ pub struct STManager {
 impl STManager {
     /* Handles updating address for each local variable from base of stack frame
     for easier assembly generation */
-    fn insert(&mut self, identifier : &String, prim : &String) {
+    pub fn insert(&mut self, identifier : &String, prim : &String) {
         //Construct symbol
         self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim), register : -1});
 
@@ -430,12 +438,11 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         let mut expr_node : Node = create_node(NodeType::Assign_Expr);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         current_node.children.push(primitive_node);
-
         if parse(&mut expr_node, tokens, symbol_table) {
             current_node.children.push(expr_node);
 
-            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
-            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
+            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["identifier"].clone());
+            symbol_table.insert(&current_node.children[1].properties["identifier"], &current_node.children[0].properties["value"]);
 
         }
         else if parse(&mut identity_node, tokens, symbol_table) {
@@ -448,6 +455,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
         }
         else{
+            println!("{}", tokens[get_current_token_index()].val);
             return false;
         }
 
@@ -1151,26 +1159,28 @@ fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, sy
     let mut identity_node : Node = create_node(NodeType::Identifier);
     let mut operator_node : Node = create_node(NodeType::Operator);
 
-    if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
-        expr_node = create_node(NodeType::Arith_Expr);
+    // if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
+    //     expr_node = create_node(NodeType::Arith_Expr);
+    // }
+    // else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+    //     expr_node = create_node(NodeType::Condition_Expr);
+    // }
+    if parse(&mut identity_node, tokens, symbol_table) {
+        if
+        parse(&mut operator_node, tokens, symbol_table) &&
+        parse(&mut expr_node, tokens, symbol_table) {
+            current_node.children.push(identity_node);
+            current_node.children.push(operator_node);
+            current_node.children.push(expr_node);
+
+            current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
+
+            return true;
+        }
+        else {
+            prev_token_index();
+            return false;
+        }
     }
-    else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
-        expr_node = create_node(NodeType::Condition_Expr);
-    }
-    
-    if 
-    parse(&mut identity_node, tokens, symbol_table) &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut expr_node, tokens, symbol_table) {
-
-        current_node.children.push(identity_node);
-        current_node.children.push(operator_node);
-        current_node.children.push(expr_node);
-
-        current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
-
-        return true;
-    }
-
     return false;
 }

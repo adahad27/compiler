@@ -38,11 +38,22 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
         }
+        NodeType::Assign_Expr => {
+            let arith_expr : &mut Node = &mut parse_tree.children[2];
+            generate_from_tree(program_string, arith_expr, symbol_table, register_manager);
+            let reg_name  = arith_expr.properties["register"].clone();
+            
+
+            let identifier : &mut Node = &mut parse_tree.children[0];
+
+            symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
+            parse_tree.properties.insert("register".to_string(), reg_name);
+
+        }
         NodeType::Arith_Expr => {
 
             assert!(parse_tree.properties.contains_key("terminal"));
             let left_operand : String = parse_tree.properties["terminal"].clone();
-
             if !is_identifier(&left_operand) {
                 //Left operand is a constant
                 
@@ -490,17 +501,11 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
-            if parse_tree.children.len() == 3 || parse_tree.children.len() == 5 {
-                program_string.push_str("\tpush 0\n");
-            }
+            program_string.push_str("\tpush 0\n");
             let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
-            if parse_tree.children.len() == 4 {
-                let register_name : String =  parse_tree.children[2].properties["register"].clone();
-                symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
-                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
-            }
-            else if parse_tree.children.len() == 5 {
-                let register_name : String =  parse_tree.children[3].properties["register"].clone();
+
+            if parse_tree.children[1].properties.contains_key("identifier") {
+                let register_name : String =  parse_tree.children[1].properties["register"].clone();
                 symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
                 program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
             }
