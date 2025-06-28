@@ -438,7 +438,54 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 generate_from_tree(program_string, elif_stmt, symbol_table, register_manager);
             }
         }
+        NodeType::While_Stmt => {
+            
+            let start_label : String = label_name(label_create());
+            let done_label : String = label_name(label_create());
 
+            program_string.push_str(format!("{}:\n", start_label).as_str());
+
+            let cond_expr : &mut Node = &mut parse_tree.children[2];
+            generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
+            let cond_reg : String = cond_expr.properties["register"].clone();
+
+            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}", done_label).as_str());
+
+            let body_node : &mut Node = &mut parse_tree.children[5];
+            generate_from_tree(program_string, body_node, symbol_table, register_manager);
+
+            program_string.push_str(format!("\tjmp {}", start_label).as_str());
+            program_string.push_str(format!("{}:\n", done_label).as_str());
+
+        }
+        NodeType::For_Stmt => {
+
+
+            let optional_expr_1 : &mut Node = &mut parse_tree.children[2];
+            generate_from_tree(program_string, optional_expr_1, symbol_table, register_manager);
+
+            let start_label : String = label_name(label_create());
+            let done_label : String = label_name(label_create());
+
+            program_string.push_str(format!("{}:\n", start_label).as_str());
+
+            let optional_expr_2 : &mut Node = &mut parse_tree.children[4];
+            generate_from_tree(program_string, optional_expr_2, symbol_table, register_manager);
+            let cond_reg : String = optional_expr_2.properties["register"].clone();
+
+            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}", done_label).as_str());
+
+            let body_node : &mut Node = &mut parse_tree.children[9];
+            generate_from_tree(program_string, body_node, symbol_table, register_manager);
+
+            let optional_expr_3 : &mut Node = &mut parse_tree.children[6];
+            generate_from_tree(program_string, optional_expr_3, symbol_table, register_manager);
+
+            program_string.push_str(format!("\tjmp {}", start_label).as_str());
+            program_string.push_str(format!("{}:\n", done_label).as_str());
+        }
         NodeType::VarDecl => {            
             
             generate_children(program_string, parse_tree, symbol_table, register_manager);

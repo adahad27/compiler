@@ -43,6 +43,7 @@ x   expression -> identifier = expression
 
 
     statement -> while_statement
+    
     while_statement -> keyword (condition_expr){body}
     condition_expr -> bool_expr | relational_expr
 
@@ -50,6 +51,7 @@ x   expression -> identifier = expression
     optional_expr -> arith_expr | condition_expr | empty
 
     statement -> for_statement
+
     for_statement -> keyword (optional_expr ; optional_expr ; optional_expr) {body}
 
     statement -> if_stmt
