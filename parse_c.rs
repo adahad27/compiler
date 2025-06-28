@@ -16,10 +16,17 @@ x   function declaration -> primitive identifier ();
     
     body -> statement | statement body
 
+    assign_expr -> identifier = expr
+
+    expr -> arith_expr | condition_expr
+
+    optional_expr -> assign_expr | expr | empty
+
     statement -> var_decl
     var_decl -> primitive identifier;
-    var_decl -> primitive idenitifer = expression ;
-    var_decl -> identifier = expression ;
+    var_decl -> primitive assign_expr;
+
+    statement -> assign_expr ;
 
 x   expression -> identifier = expression
     
@@ -48,7 +55,6 @@ x   expression -> identifier = expression
     condition_expr -> bool_expr | relational_expr
 
 
-    optional_expr -> arith_expr | condition_expr | empty
 
     statement -> for_statement
 
@@ -89,11 +95,6 @@ fn get_current_token_index() -> usize {
     
 }
 
-fn token_lookahead() -> usize {
-    unsafe {
-        return (CURRENT_TOKEN_INDEX + 1) as usize;
-    }
-}
 
 fn next_token_index() -> usize {
     unsafe {
@@ -103,12 +104,6 @@ fn next_token_index() -> usize {
     
 }
 
-fn prev_token_index() ->usize {
-    unsafe {
-        CURRENT_TOKEN_INDEX -= 1;
-        return CURRENT_TOKEN_INDEX as usize;
-    }
-}
 
 pub struct Symbol {
     pub primitive : String, 
@@ -160,6 +155,8 @@ pub enum NodeType {
     Primitive,
     Identifier,
     Body,
+    Assign_Expr,
+    Expression,
     Optional_Expr,
     Condition_Expr,
     Arith_Expr,
@@ -221,6 +218,10 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_tab
         NodeType::Separator => parse_terminal(current_node, tokens, &token_c::TokenType::Separator),
 
         NodeType::Body => parse_body(current_node, tokens, symbol_table),
+
+        NodeType::Assign_Expr => parse_assign_expr(current_node, tokens, symbol_table),
+
+        NodeType::Expression => parse_expr(current_node, tokens, symbol_table),
 
         NodeType::Arith_Expr => parse_arith_expr(current_node, tokens, symbol_table),
 
@@ -360,13 +361,9 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
             current_node.children.push(return_node);
             return true;
         }
-        else {
-            return false;
-        }
     }
     else if 
-    is_primitive(&tokens[get_current_token_index()].val) ||
-    is_identifier(&tokens[get_current_token_index()].val) {
+    is_primitive(&tokens[get_current_token_index()].val) {
         //Then we have found a variable declaration
         let mut var_decl : Node = create_node(NodeType::VarDecl);
 
@@ -375,8 +372,20 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
             current_node.children.push(var_decl);
             return true;
         }
-        else {
-            return false;
+        
+    }
+    else if 
+    is_identifier(&tokens[get_current_token_index()].val) {
+        //Then we have found a variable declaration
+        let mut assign_expr : Node = create_node(NodeType::Assign_Expr);
+        let mut semicolon_node : Node = create_node(NodeType::Separator);
+
+        if 
+        parse(&mut assign_expr, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table) {
+            current_node.children.push(assign_expr);
+            current_node.children.push(semicolon_node);
+            return true;
         }
         
     }
@@ -387,8 +396,21 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
             current_node.children.push(if_stmt);
             return true;
         }
-        else {
-            return false;
+    }
+    else if tokens[get_current_token_index()].val == "for".to_string() {
+        let mut for_stmt : Node = create_node(NodeType::For_Stmt);
+        if parse(&mut for_stmt, tokens, symbol_table) 
+        {
+            current_node.children.push(for_stmt);
+            return true;
+        }
+    }
+    else if tokens[get_current_token_index()].val == "while".to_string() {
+        let mut while_stmt : Node = create_node(NodeType::While_Stmt);
+        if parse(&mut while_stmt, tokens, symbol_table) 
+        {
+            current_node.children.push(while_stmt);
+            return true;
         }
     }
     return false;
@@ -401,80 +423,41 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
     //Defaults to arith_expr
     // let mut expr_node : Node = create_node(NodeType::Arith_Expr);
     // let mut expr_node : Node = create_node(NodeType::Bool_Expr);
-    let mut expr_node : Node = create_node(NodeType::Relational_Expr);
+    
 
-
-    if 
-    parse(&mut primitive_node, tokens, symbol_table) && parse(&mut identity_node, tokens, symbol_table) {
+    if parse(&mut primitive_node, tokens, symbol_table) {
         
-        current_node.children.push(primitive_node);
-        current_node.children.push(identity_node);
-        
-        if current_node.children[0].properties["value"] == "int".to_string() {
-            expr_node = create_node(NodeType::Arith_Expr);
-        }
-        else if current_node.children[0].properties["value"] == "bool".to_string() {
-            expr_node = create_node(NodeType::Condition_Expr);
-        }
-
-
+        let mut expr_node : Node = create_node(NodeType::Assign_Expr);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
-        let mut operator_node : Node = create_node(NodeType::Operator);
+        current_node.children.push(primitive_node);
 
-        if is_separator(&tokens[get_current_token_index()].val) {
-            parse(&mut semicolon_node, tokens, symbol_table);
-            current_node.children.push(semicolon_node);
-            
+        if parse(&mut expr_node, tokens, symbol_table) {
+            current_node.children.push(expr_node);
+
+            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
+            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
+
+        }
+        else if parse(&mut identity_node, tokens, symbol_table) {
+            current_node.children.push(identity_node);
+
             current_node.properties.insert("value".to_string(), "0".to_string());
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
             
             symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
-            return true;
+
         }
-        else if is_operator(&tokens[get_current_token_index()].val) {
-            parse(&mut operator_node, tokens, symbol_table);
-            parse(&mut expr_node, tokens, symbol_table);
-            parse(&mut semicolon_node, tokens, symbol_table);
+        else{
+            return false;
+        }
 
-            current_node.children.push(operator_node);
-            current_node.children.push(expr_node);
+        if parse(&mut semicolon_node, tokens, symbol_table) {
             current_node.children.push(semicolon_node);
-
-            current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
-            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
             return true;
-
         }
         return false;
 
     }
-    else if parse(&mut identity_node, tokens, symbol_table) {
-        let mut operator_node : Node = create_node(NodeType::Operator);
-        let mut semicolon_node : Node = create_node(NodeType::Separator);
-        
-        if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
-            expr_node = create_node(NodeType::Arith_Expr);
-        }
-        else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
-            expr_node = create_node(NodeType::Condition_Expr);
-        }
-
-        if
-        parse(&mut operator_node, tokens, symbol_table) &&
-        parse(&mut expr_node, tokens, symbol_table) &&
-        parse(&mut semicolon_node, tokens, symbol_table) {
-            
-            current_node.children.push(identity_node);
-            current_node.children.push(operator_node);
-            current_node.children.push(expr_node);
-            
-            current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
-            current_node.children.push(semicolon_node);
-
-            return true;
-        }
-    }
-
     return false;
 }
 
@@ -1129,6 +1112,25 @@ fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
 fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
 
+    let mut expr: Node = create_node(NodeType::Expression);
+    let mut assign_expr : Node = create_node(NodeType::Assign_Expr);
+    if parse(&mut assign_expr, tokens, symbol_table) {
+        current_node.children.push(assign_expr);
+        return true;
+    }
+    else if parse(&mut expr, tokens, symbol_table) {
+        current_node.children.push(expr);
+        return true;
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+
+    return false;
+}
+
+fn parse_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+
     let mut arith_expr : Node = create_node(NodeType::Arith_Expr);
     let mut conditional_expr : Node = create_node(NodeType::Condition_Expr);
 
@@ -1140,7 +1142,33 @@ fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, 
         current_node.children.push(conditional_expr);
         return true;
     }
-    else if is_separator(&tokens[get_current_token_index()].val) {
+
+    return false;
+}
+
+fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_table : &mut STManager) -> bool {
+    let mut expr_node : Node = create_node(NodeType::Arith_Expr);
+    let mut identity_node : Node = create_node(NodeType::Identifier);
+    let mut operator_node : Node = create_node(NodeType::Operator);
+
+    if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
+        expr_node = create_node(NodeType::Arith_Expr);
+    }
+    else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+        expr_node = create_node(NodeType::Condition_Expr);
+    }
+    
+    if 
+    parse(&mut identity_node, tokens, symbol_table) &&
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut expr_node, tokens, symbol_table) {
+
+        current_node.children.push(identity_node);
+        current_node.children.push(operator_node);
+        current_node.children.push(expr_node);
+
+        current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
+
         return true;
     }
 
