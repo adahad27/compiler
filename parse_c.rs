@@ -438,11 +438,15 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         let mut expr_node : Node = create_node(NodeType::Assign_Expr);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
         current_node.children.push(primitive_node);
+
+        if is_identifier(&tokens[get_current_token_index()].val) {
+            symbol_table.insert(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"]);
+        }
+
         if parse(&mut expr_node, tokens, symbol_table) {
             current_node.children.push(expr_node);
 
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["identifier"].clone());
-            symbol_table.insert(&current_node.children[1].properties["identifier"], &current_node.children[0].properties["value"]);
 
         }
         else if parse(&mut identity_node, tokens, symbol_table) {
@@ -450,8 +454,6 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
             current_node.properties.insert("value".to_string(), "0".to_string());
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
-            
-            symbol_table.insert(&current_node.children[1].properties["value"], &current_node.children[0].properties["value"]);
 
         }
         else{
@@ -1159,13 +1161,16 @@ fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, sy
     let mut identity_node : Node = create_node(NodeType::Identifier);
     let mut operator_node : Node = create_node(NodeType::Operator);
 
-    // if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
-    //     expr_node = create_node(NodeType::Arith_Expr);
-    // }
-    // else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
-    //     expr_node = create_node(NodeType::Condition_Expr);
-    // }
+
     if parse(&mut identity_node, tokens, symbol_table) {
+
+        if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
+            expr_node = create_node(NodeType::Arith_Expr);
+        }
+        else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+            expr_node = create_node(NodeType::Condition_Expr);
+        }
+
         if
         parse(&mut operator_node, tokens, symbol_table) &&
         parse(&mut expr_node, tokens, symbol_table) {

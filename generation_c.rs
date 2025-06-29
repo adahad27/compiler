@@ -75,7 +75,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                     reg_name
                 };
                 parse_tree.properties.insert("register".to_string(), result_reg);
-                //Free allocated register
+                
             }
 
         }
@@ -91,6 +91,8 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let result_reg : String = term_node.properties["register"].clone();
 
                 program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+
+                register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
                 //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
@@ -161,6 +163,9 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                
+
+                register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
                 let subterm_node : &mut Node = &mut parse_tree.children[2];
                 generate_from_tree(program_string, subterm_node, symbol_table, register_manager);
@@ -227,7 +232,9 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let result_reg : String = bool_term_node.properties["register"].clone();
 
                 and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
-                
+
+                register_manager.register_free(register_manager.register_index(&result_reg) as u32);
+
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
 
@@ -271,6 +278,8 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
                 and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
 
+                register_manager.register_free(register_manager.register_index(&result_reg) as u32);
+
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
 
@@ -313,6 +322,8 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 let result_reg : String = bool_operand_node.properties["register"].clone();
 
                 equality_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
+
+                register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
                 parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
                 parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
