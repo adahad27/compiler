@@ -26,7 +26,7 @@ fn main() {
     if parse(&mut current_node, &token_list, &mut  symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        // let filename : String = "src_files/feature_testing/test_relational.asm".to_string();
+        // let filename : String = "src_files/feature_testing/test_loops.asm".to_string();
         generate_code(&filename, &mut current_node, &mut symbol_table);
     }
     else {

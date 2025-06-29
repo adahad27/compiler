@@ -387,6 +387,14 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             parse_tree.properties.insert("register".to_string(), expr_node.properties["register"].clone());
 
         }
+        NodeType::Expression => {
+            let expr_node : &mut Node = &mut parse_tree.children[0];
+
+            generate_from_tree(program_string, expr_node, symbol_table, register_manager);
+
+            parse_tree.properties.insert("register".to_string(), expr_node.properties["register"].clone());
+
+        }
         NodeType::If_Stmt => {
 
             let cond_expr : &mut Node = &mut parse_tree.children[2];
@@ -494,10 +502,10 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             let optional_expr_2 : &mut Node = &mut parse_tree.children[4];
             generate_from_tree(program_string, optional_expr_2, symbol_table, register_manager);
-            let cond_reg : String = optional_expr_2.properties["register"].clone();
+            let cond_reg : String = optional_expr_2.children[0].properties["register"].clone();
 
-            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
-            program_string.push_str(format!("\tje {}", done_label).as_str());
+            program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
             let body_node : &mut Node = &mut parse_tree.children[9];
             generate_from_tree(program_string, body_node, symbol_table, register_manager);
@@ -505,7 +513,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             let optional_expr_3 : &mut Node = &mut parse_tree.children[6];
             generate_from_tree(program_string, optional_expr_3, symbol_table, register_manager);
 
-            program_string.push_str(format!("\tjmp {}", start_label).as_str());
+            program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
         }
         NodeType::VarDecl => {            

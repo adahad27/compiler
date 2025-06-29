@@ -20,11 +20,11 @@ x   function declaration -> primitive identifier ();
 
     expr -> arith_expr | condition_expr
 
-    optional_expr -> assign_expr | expr | empty
+    optional_expr -> var_decl | assign_expr | expr | empty
 
-    statement -> var_decl
-    var_decl -> primitive identifier;
-    var_decl -> primitive assign_expr;
+    statement -> var_decl;
+    var_decl -> primitive identifier
+    var_decl -> primitive assign_expr
 
     statement -> assign_expr ;
 
@@ -374,8 +374,11 @@ fn parse_statement(current_node : &mut Node, tokens : &Vec<token_c::Token>, symb
     is_primitive(&tokens[get_current_token_index()].val) {
         //Then we have found a variable declaration
         let mut var_decl : Node = create_node(NodeType::VarDecl);
+        let mut semicolon_node : Node = create_node(NodeType::Separator);
 
-        if parse(&mut var_decl, tokens, symbol_table) 
+        if 
+        parse(&mut var_decl, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table)
         {
             current_node.children.push(var_decl);
             return true;
@@ -436,7 +439,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
     if parse(&mut primitive_node, tokens, symbol_table) {
         
         let mut expr_node : Node = create_node(NodeType::Assign_Expr);
-        let mut semicolon_node : Node = create_node(NodeType::Separator);
+        // let mut semicolon_node : Node = create_node(NodeType::Separator);
         current_node.children.push(primitive_node);
 
         if is_identifier(&tokens[get_current_token_index()].val) {
@@ -447,6 +450,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(expr_node);
 
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["identifier"].clone());
+            return true;
 
         }
         else if parse(&mut identity_node, tokens, symbol_table) {
@@ -454,18 +458,14 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
 
             current_node.properties.insert("value".to_string(), "0".to_string());
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
+            return true;
 
         }
         else{
-            println!("{}", tokens[get_current_token_index()].val);
+            
             return false;
         }
-
-        if parse(&mut semicolon_node, tokens, symbol_table) {
-            current_node.children.push(semicolon_node);
-            return true;
-        }
-        println!("{}", tokens[get_current_token_index()].val);
+        
         return false;
 
     }
@@ -1124,7 +1124,7 @@ fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
         current_node.children.push(body_node);
         current_node.children.push(close_curly_node);
 
-
+        return true;
     }
 
     return false;
@@ -1134,7 +1134,13 @@ fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, 
 
     let mut expr: Node = create_node(NodeType::Expression);
     let mut assign_expr : Node = create_node(NodeType::Assign_Expr);
-    if parse(&mut assign_expr, tokens, symbol_table) {
+    let mut var_decl : Node = create_node(NodeType::VarDecl);
+
+    if parse(&mut var_decl, tokens, symbol_table) {
+        current_node.children.push(var_decl);
+        return true;
+    }
+    else if parse(&mut assign_expr, tokens, symbol_table) {
         current_node.children.push(assign_expr);
         return true;
     }
@@ -1153,15 +1159,16 @@ fn parse_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbol_ta
 
     let mut arith_expr : Node = create_node(NodeType::Arith_Expr);
     let mut conditional_expr : Node = create_node(NodeType::Condition_Expr);
-
-    if parse(&mut arith_expr, tokens, symbol_table) {
-        current_node.children.push(arith_expr);
-        return true;
-    }
-    else if parse(&mut conditional_expr, tokens, symbol_table) {
+    
+    if parse(&mut conditional_expr, tokens, symbol_table) {
         current_node.children.push(conditional_expr);
         return true;
     }
+    else if parse(&mut arith_expr, tokens, symbol_table) {
+        current_node.children.push(arith_expr);
+        return true;
+    }
+    
 
     return false;
 }
