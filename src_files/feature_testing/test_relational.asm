@@ -2,6 +2,7 @@ global _start
 _start:
 	push rbp
 	mov rbp, rsp
+	push 0
 	mov qword rbx, 4
 	mov qword r10, 4
 	cmp rbx, r10
@@ -11,7 +12,6 @@ _start:
 .L1:
 	mov rbx, 1
 .L2:
-	push 0
 	mov qword [rbp-8], rbx
 	mov qword rbx, 4
 	mov qword r11, 4
@@ -22,30 +22,32 @@ _start:
 .L3:
 	mov rbx, 1
 .L4:
+	mov qword [rbp-8], rbx
+	mov qword rbx, 4
 	mov qword r12, 4
-	mov qword r13, 4
-	cmp r12, r13
+	cmp rbx, r12
 	jl .L5
-	mov r12, 0
+	mov rbx, 0
 	jmp .L6
 .L5:
-	mov r12, 1
+	mov rbx, 1
 .L6:
-	mov qword r14, 3
+	mov qword [rbp-8], rbx
 	push 0
-	mov qword [rbp-16], r14
-	mov r14, [rbp-16]
-	mov qword r15, 5
-	cmp r14, r15
+	mov qword rbx, 3
+	mov qword [rbp-16], rbx
+	push 0
+	mov rbx, [rbp-16]
+	mov qword r13, 5
+	cmp rbx, r13
 	jl .L7
-	mov r14, 0
+	mov rbx, 0
 	jmp .L8
 .L7:
-	mov r14, 1
+	mov rbx, 1
 .L8:
-	push 0
-	mov qword [rbp-24], r14
-	mov r14, [rbp-8]
-	mov rdi, r14
+	mov qword [rbp-24], rbx
+	mov rbx, [rbp-24]
+	mov rdi, rbx
 	mov rax, 60
 	syscall

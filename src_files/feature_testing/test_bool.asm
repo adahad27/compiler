@@ -3,11 +3,11 @@ _start:
 	push rbp
 	mov rbp, rsp
 	push 0
+	push 0
 	mov qword rbx, 1
-	push 0
 	mov qword [rbp-16], rbx
-	mov qword rbx, 0
 	push 0
+	mov qword rbx, 0
 	mov qword [rbp-24], rbx
 	mov rbx, [rbp-16]
 	mov r10, [rbp-24]
@@ -51,7 +51,8 @@ _start:
 .L7:
 	mov rbx, 1
 .L8:
-	mov r10, [rbp-8]
-	mov rdi, r10
+	mov qword [rbp-8], rbx
+	mov rbx, [rbp-8]
+	mov rdi, rbx
 	mov rax, 60
 	syscall

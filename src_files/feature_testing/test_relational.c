@@ -7,5 +7,5 @@ int main() {
 
     bool x = y < 5;
 
-    return z;
+    return x;
 }

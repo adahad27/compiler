@@ -47,7 +47,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             let identifier : &mut Node = &mut parse_tree.children[0];
 
             symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
-            parse_tree.properties.insert("register".to_string(), reg_name);
+            parse_tree.properties.insert("register".to_string(), reg_name.clone());
+
+            let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+            
+            register_manager.register_free(register_manager.register_index(&reg_name) as u32);
+
+            program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, reg_name).as_str());
 
         }
         NodeType::Arith_Expr => {
@@ -465,13 +471,13 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
-            program_string.push_str(format!("\tcmp {}, 0", cond_reg).as_str());
-            program_string.push_str(format!("\tje {}", done_label).as_str());
+            program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
+            program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
             let body_node : &mut Node = &mut parse_tree.children[5];
             generate_from_tree(program_string, body_node, symbol_table, register_manager);
 
-            program_string.push_str(format!("\tjmp {}", start_label).as_str());
+            program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
 
         }
@@ -503,19 +509,19 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             program_string.push_str(format!("{}:\n", done_label).as_str());
         }
         NodeType::VarDecl => {            
-            
+            program_string.push_str("\tpush 0\n");
             generate_children(program_string, parse_tree, symbol_table, register_manager);
             
-            program_string.push_str("\tpush 0\n");
-            let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+            
+            // let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
 
-            if parse_tree.children[1].properties.contains_key("identifier") {
-                let register_name : String =  parse_tree.children[1].properties["register"].clone();
-                symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
-                program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
+            // if parse_tree.children[1].properties.contains_key("identifier") {
+            //     let register_name : String =  parse_tree.children[1].properties["register"].clone();
+            //     symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
+            //     program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
                 
-                register_manager.register_free(register_manager.register_index(&register_name) as u32);
-            }
+            //     register_manager.register_free(register_manager.register_index(&register_name) as u32);
+            // }
             
         }
         NodeType::Return_Stmt => {
