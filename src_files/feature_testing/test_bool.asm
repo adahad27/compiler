@@ -6,52 +6,52 @@ _start:
 	mov qword rbx, 1
 	push 0
 	mov qword [rbp-16], rbx
-	mov qword r10, 0
+	mov qword rbx, 0
 	push 0
-	mov qword [rbp-24], r10
-	mov qword r11, 1
-	mov qword r12, 0
-	xor r12, 1
-	mov qword r13, 0
-	cmp r12, 0
+	mov qword [rbp-24], rbx
+	mov rbx, [rbp-16]
+	mov r10, [rbp-24]
+	xor r10, 1
+	mov r11, [rbp-24]
+	cmp r10, 0
 	je .L1
-	cmp r13, 0
+	cmp r11, 0
 	je .L1
-	mov r12, 1
+	mov r10, 1
 	jmp .L2
 .L1:
-	mov r12, 0
+	mov r10, 0
 .L2:
-	cmp r11, 1
+	cmp rbx, 1
 	je .L3
-	cmp r12, 1
+	cmp r10, 1
 	je .L3
-	mov r11, 0
+	mov rbx, 0
 	jmp .L4
 .L3:
-	mov r11, 1
+	mov rbx, 1
 .L4:
-	mov qword r14, 1
-	mov qword r15, 0
-	cmp r14, 0
+	mov r10, [rbp-16]
+	mov r11, [rbp-24]
+	cmp r10, 0
 	je .L5
-	cmp r15, 0
+	cmp r11, 0
 	je .L5
-	mov r14, 1
+	mov r10, 1
 	jmp .L6
 .L5:
-	mov r14, 0
+	mov r10, 0
 .L6:
-	cmp r11, 1
+	cmp rbx, 1
 	je .L7
-	cmp r14, 1
+	cmp r10, 1
 	je .L7
-	mov r11, 0
+	mov rbx, 0
 	jmp .L8
 .L7:
-	mov r11, 1
+	mov rbx, 1
 .L8:
-	mov qword [rbp-8], r11
-	mov rdi, r11
+	mov r10, [rbp-8]
+	mov rdi, r10
 	mov rax, 60
 	syscall

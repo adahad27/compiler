@@ -465,6 +465,7 @@ fn parse_var_decl(current_node : &mut Node, tokens : &Vec<token_c::Token>, symbo
             current_node.children.push(semicolon_node);
             return true;
         }
+        println!("{}", tokens[get_current_token_index()].val);
         return false;
 
     }
@@ -877,7 +878,16 @@ fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<token_c::Token>, s
         current_node.properties.insert("terminal".to_string(), terminal);
         return true;
     }
-
+    else if 
+    parse(&mut identifier_node, tokens, symbol_table) {
+        if symbol_table.query(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+            current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
+            current_node.children.push(identifier_node);
+            return true;
+        }
+        prev_token_index();
+        return false;
+    }
     return false;
 }
 
@@ -1172,6 +1182,7 @@ fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<token_c::Token>, sy
         }
 
         if
+        tokens[get_current_token_index()].val == "=".to_string() &&
         parse(&mut operator_node, tokens, symbol_table) &&
         parse(&mut expr_node, tokens, symbol_table) {
             current_node.children.push(identity_node);

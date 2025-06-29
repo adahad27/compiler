@@ -3,7 +3,7 @@ int main() {
     bool y = true;
     bool z = false;
 
-    x = true || !false && false || true && false;
+    x = y || !z && z || y && z;
 
     return x;
 }
