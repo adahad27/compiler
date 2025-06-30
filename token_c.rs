@@ -66,7 +66,8 @@ pub fn is_separator(input : &String) -> bool {
     input == ")" || 
     input == "{" || 
     input == "}" || 
-    input == ";" {
+    input == ";" ||
+    input == "," {
         return true;
     }
     return false;

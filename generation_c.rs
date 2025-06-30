@@ -21,14 +21,14 @@ pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : 
     generate_from_tree(&mut program_string, parse_tree, symbol_table, &mut register_manager);
 
 
-    generate_exit_stub(&mut program_string);
+    // generate_exit_stub(&mut program_string);
 
     fs::write(filename, program_string).expect("Unable to write to file");
 
 }
 
 fn generate_start_stub(program_string : &mut String) {
-    program_string.push_str("global _start\n_start:\n");
+    program_string.push_str("global main\nmain:\n");
 }
 
 fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut STManager, register_manager : &mut RegisterManager) {
@@ -36,6 +36,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
         NodeType::Function_Declaration => {
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
             generate_children(program_string, parse_tree, symbol_table, register_manager);
+            program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret").as_str());
             
         }
         NodeType::Assign_Expr => {
@@ -429,7 +430,6 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             //Generate the actual end label
             program_string.push_str(format!("{}:\n", end_label).as_str());
         }
-
         NodeType::Elif_Stmt => {
             if parse_tree.children.len() == 1 {
                 //Then just pass through the generation to the else_stmt node
@@ -548,7 +548,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                     //Then we have an actual number
                     source = operand;
                 }
-                program_string.push_str(format!("\tmov rdi, {}\n", source).as_str());
+                program_string.push_str(format!("\tmov rax, {}\n", source).as_str());
             }
             
             

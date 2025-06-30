@@ -1,9 +1,10 @@
-global _start
-_start:
+global main
+main:
 	push rbp
 	mov rbp, rsp
 	push 3
 	push 0
-	mov rdi, [rbp-16]
-	mov rax, 60
-	syscall
+	mov rax, [rbp-8]
+	mov rsp, rbp
+	pop rbp
+	ret

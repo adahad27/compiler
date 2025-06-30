@@ -88,7 +88,7 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
         current_node.children.push(primitive_node);
 
         if is_identifier(&tokens[get_current_token_index()].val) {
-            symbol_table.insert(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"]);
+            symbol_table.insert(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"], false);
         }
 
         if parse(&mut expr_node, tokens, symbol_table) {

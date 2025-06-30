@@ -1,5 +1,5 @@
-global _start
-_start:
+global main
+main:
 	push rbp
 	mov rbp, rsp
 	push 0
@@ -56,6 +56,7 @@ _start:
 	jmp .L5
 .L6:
 	mov r13, [rbp-8]
-	mov rdi, r13
-	mov rax, 60
-	syscall
+	mov rax, r13
+	mov rsp, rbp
+	pop rbp
+	ret

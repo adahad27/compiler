@@ -14,7 +14,7 @@ This is the grammer that is currently being implemeted by the parser:
 x   function declaration -> primitive identifier (arguments);
     function declaration -> primitive identifier (arguments){body}
     
-    arguments -> primitive identifier arguments | empty
+    arguments -> primitive identifier, arguments | empty
 
     body -> statement | statement body
 
@@ -121,7 +121,8 @@ pub struct Symbol {
     pub primitive : String, 
     pub addr : u32,
     pub size : u32,
-    pub register : i32
+    pub register : i32,
+    pub func : bool
 }
 
 pub struct STManager {
@@ -133,9 +134,9 @@ pub struct STManager {
 impl STManager {
     /* Handles updating address for each local variable from base of stack frame
     for easier assembly generation */
-    pub fn insert(&mut self, identifier : &String, prim : &String) {
+    pub fn insert(&mut self, identifier : &String, prim : &String, func : bool) {
         //Construct symbol
-        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim), register : -1});
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : get_primitive_size(&prim), register : -1, func : func});
 
         //Update stack pointer
         self.ordinal += 1;
@@ -152,7 +153,8 @@ impl STManager {
             primitive: self.symbol_table[identifier].primitive.clone(),
             addr: self.symbol_table[identifier].addr,
             size: self.symbol_table[identifier].size,
-            register: register 
+            register: register,
+            func : self.symbol_table[identifier].func
         });
     }
 
@@ -297,28 +299,29 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut
 
 fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
     //Create a new node of type function declaration            
-            let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
+    let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
 
-            
-            /* 
-            Parse the function declaration node first. If it returns a node, then
-            the parser is free to continue, if it returns None, then the parser
-            must backtrack.
-            */
+    
+    /* 
+    Parse the function declaration node first. If it returns a node, then
+    the parser is free to continue, if it returns None, then the parser
+    must backtrack.
+    */
 
-            if parse(&mut function_declaration_node, tokens, symbol_table) {
-                current_node.children.push(function_declaration_node);
-                return true;
-            }
-            else {
-                return false;
-            }
+    if parse(&mut function_declaration_node, tokens, symbol_table) {
+        current_node.children.push(function_declaration_node);
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
-fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) ->bool {
+fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut arguments_node : Node = create_node(NodeType::Arguments);
     let mut close_paren_node : Node = create_node(NodeType::Separator);
     let mut open_curly_node : Node = create_node(NodeType::Separator);
     let mut body_node : Node = create_node(NodeType::Body);
@@ -334,6 +337,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut primitive_node, tokens, symbol_table) &&
     parse(&mut identifier_node, tokens, symbol_table) &&
     parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut arguments_node, tokens, symbol_table) &&
     parse(&mut close_paren_node, tokens, symbol_table) &&
     parse(&mut open_curly_node, tokens, symbol_table) &&
     parse(&mut body_node, tokens, symbol_table) &&
@@ -342,6 +346,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
         current_node.children.push(open_paren_node);
+        current_node.children.push(arguments_node);
         current_node.children.push(close_paren_node);
         current_node.children.push(open_curly_node);
         current_node.children.push(body_node);
@@ -367,5 +372,30 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<Token>, tok_type : &To
 
 
 fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
+
+    let mut prim_node : Node = create_node(NodeType::Primitive);
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut comma_node : Node = create_node(NodeType::Separator);
+    let mut argument_node : Node = create_node(NodeType::Arguments);
+
+    if
+    parse(&mut prim_node, tokens, symbol_table) &&
+    parse(&mut identifier_node, tokens, symbol_table) &&
+    parse(&mut comma_node, tokens, symbol_table) &&
+    parse(&mut argument_node, tokens, symbol_table) {
+        
+        current_node.children.push(prim_node);
+        current_node.children.push(identifier_node);
+        current_node.children.push(comma_node);
+        current_node.children.push(argument_node);
+        return true;
+    }
+    else if 
+    tokens[get_current_token_index()].val == ")" {
+        
+        return true;
+    }
+
+
     return false;
 }
