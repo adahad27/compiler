@@ -2,6 +2,8 @@ use std::fs;
 mod token_c;
 mod parse_c;
 mod generation_c;
+mod expression_c;
+mod statement_c;
 
 use std::collections::HashMap;
 use crate::token_c::{lex_file, Token};
