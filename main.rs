@@ -8,13 +8,13 @@ mod statement_c;
 use std::collections::HashMap;
 use crate::token_c::{lex_file, Token};
 use crate::generation_c::generate_code;
-use crate::parse_c::{parse, create_node, Node, NodeType, STManager};
+use crate::parse_c::{parse, create_node, Node, NodeType, SymbolTable};
 
 
 fn main() {
 
 
-    let mut symbol_table : STManager = STManager{symbol_table : HashMap::new(), ordinal : 1};
+    let mut symbol_table : SymbolTable = SymbolTable{symbol_table : HashMap::new(), ordinal : 1};
     
     let path : String = "src_files/feature_testing/".to_string();
     let file : String = "test_bool.c".to_string();

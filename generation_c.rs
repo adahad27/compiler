@@ -6,11 +6,11 @@ logic
 
 use std::{fs};
 
-use crate::{parse_c::{ Node, NodeType, STManager}, token_c::is_identifier};
+use crate::{parse_c::{ Node, NodeType, SymbolTable}, token_c::is_identifier};
 
 static mut CURRENT_LABEL_INDEX : u32 = 0;
 
-pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : &mut STManager) {
+pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : &mut SymbolTable) {
     let mut program_string : String = "".to_string();
 
     generate_start_stub(&mut program_string);
@@ -31,7 +31,7 @@ fn generate_start_stub(program_string : &mut String) {
     program_string.push_str("global main\nmain:\n");
 }
 
-fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut STManager, register_manager : &mut RegisterManager) {
+fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
     match parse_tree.node_type {
         NodeType::Function_Declaration => {
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
@@ -560,7 +560,7 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
     }
 }
 
-fn generate_children(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut STManager, register_manager : &mut RegisterManager) {
+fn generate_children(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
     for mut node in &mut parse_tree.children {
         generate_from_tree(program_string, &mut node, symbol_table, register_manager);
     }

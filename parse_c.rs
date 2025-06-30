@@ -125,13 +125,13 @@ pub struct Symbol {
     pub func : bool
 }
 
-pub struct STManager {
+pub struct SymbolTable {
     pub symbol_table : HashMap<String, Symbol>,
     pub ordinal : u32
 }
 
 
-impl STManager {
+impl SymbolTable {
     /* Handles updating address for each local variable from base of stack frame
     for easier assembly generation */
     pub fn insert(&mut self, identifier : &String, prim : &String, func : bool) {
@@ -158,6 +158,56 @@ impl STManager {
         });
     }
 
+}
+
+pub struct STManager {
+    pub stack : Vec<SymbolTable>
+}
+
+impl STManager {
+    pub fn scope_enter(&mut self, new_frame : bool) {
+        let mut new_st : SymbolTable;
+        if new_frame {
+            new_st = SymbolTable{symbol_table : HashMap::new(), ordinal : 1};
+        }
+        else {
+            assert!(self.stack.len() > 0);
+            new_st = SymbolTable{symbol_table : HashMap::new(), ordinal : self.stack[self.stack.len() - 1].ordinal}
+        }
+        self.stack.push(new_st);
+    }
+
+    pub fn scope_exit(&mut self) {
+        self.stack.pop();
+    }
+
+    pub fn scope_level(&self) -> u32{
+        return self.stack.len() as u32;
+    }
+
+    pub fn scope_bind(&mut self, identifier : &String, prim : &String, func : bool) {
+        let index : usize = self.stack.len() - 1;
+        self.stack[index].insert(identifier, prim, func);
+    }
+
+    pub fn scope_lookup(&self, identifier :&String) -> Option<&Symbol>{
+        let mut index : usize = self.stack.len() - 1;
+        while index > 0 {
+            if let Option::Some(symbol) = self.stack[index].query(identifier) {
+                return Option::Some(symbol);
+            }
+            index -= 1;
+        }
+        return Option::None;
+    }
+
+    pub fn scope_lookup_current(&self, identifier : &String) -> Option<&Symbol> {
+        let index : usize = self.stack.len() - 1;
+        if let Option::Some(symbol) = self.stack[index].query(identifier) {
+            return Option::Some(symbol);
+        }
+        return Option::None;
+    }
 }
 
 
@@ -218,7 +268,7 @@ pub fn create_node(n_type : NodeType) -> Node {
 
 
 
-pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool{
+pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool{
 
     match current_node.node_type {
 
@@ -297,7 +347,7 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut
 
 }
 
-fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
+fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
     //Create a new node of type function declaration            
     let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
 
@@ -317,7 +367,7 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table
     }
 }
 
-fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
+fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
@@ -371,7 +421,7 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<Token>, tok_type : &To
 }
 
 
-fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut STManager) -> bool {
+fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
 
     let mut prim_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
