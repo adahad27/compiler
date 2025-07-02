@@ -6,9 +6,13 @@ The compiler will be responsible for compiling <C into x86 assembly, more specif
 Intel syntax was chosen because this project uses NASM for assembling which employs Intel syntax. This project also uses GNU's own linker for linking.
 More updates to the goal will be added as the scope of the project becomes clear.
 
-Features of <C (either already implemented or planned):
-1. Support for int, bool, and char primitive types
+Implemented features of <C:
+1. Support for int, bool
 2. Support for arithmetic, boolean, and relational operators
 3. Support for conditional and loop statements
-4. Function declarations, definitions, and calls
+
+Planned features of <C:
+1. Support for char primitive type
+2. Function declarations, definitions, and calls
+3. Arrays (Stack allocated)
 

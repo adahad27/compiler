@@ -10,15 +10,15 @@ use crate::{parse_c::{ Node, NodeType, SymbolTable}, token_c::is_identifier};
 
 static mut CURRENT_LABEL_INDEX : u32 = 0;
 
-pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : &mut SymbolTable) {
+pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table : &mut SymbolTable) {
     let mut program_string : String = "".to_string();
 
-    generate_start_stub(&mut program_string);
+    generate_start_stub(&mut program_string, symbol_table);
 
     let mut register_manager = RegisterManager{register_list : Vec::new()};
     register_manager.initialize();
 
-    generate_from_tree(&mut program_string, parse_tree, symbol_table, &mut register_manager);
+    generate(&mut program_string, current_node, symbol_table, &mut register_manager);
 
 
     // generate_exit_stub(&mut program_string);
@@ -27,30 +27,36 @@ pub fn generate_code(filename : &String, parse_tree : &mut Node, symbol_table : 
 
 }
 
-fn generate_start_stub(program_string : &mut String) {
-    program_string.push_str("global main\nmain:\n");
+fn generate_start_stub(program_string : &mut String, table : &mut SymbolTable) {
+
+    for (identifier, symbol) in table.symbol_table.iter() {
+        if symbol.func {
+            program_string.push_str(format!("global {}\n", identifier).as_str());
+        }
+    }
 }
 
-fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
-    match parse_tree.node_type {
+fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
+    match current_node.node_type {
         NodeType::Function_Declaration => {
+            program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
-            generate_children(program_string, parse_tree, symbol_table, register_manager);
+            generate_children(program_string, current_node, symbol_table, register_manager);
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret").as_str());
             
         }
         NodeType::Assign_Expr => {
-            let arith_expr : &mut Node = &mut parse_tree.children[2];
-            generate_from_tree(program_string, arith_expr, symbol_table, register_manager);
+            let arith_expr : &mut Node = &mut current_node.children[2];
+            generate(program_string, arith_expr, symbol_table, register_manager);
             let reg_name  = arith_expr.properties["register"].clone();
             
 
-            let identifier : &mut Node = &mut parse_tree.children[0];
+            let identifier : &mut Node = &mut current_node.children[0];
 
             symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
-            parse_tree.properties.insert("register".to_string(), reg_name.clone());
+            current_node.properties.insert("register".to_string(), reg_name.clone());
 
-            let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+            let offset : i32 = symbol_table.query(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
             
             register_manager.register_free(register_manager.register_index(&reg_name) as u32);
 
@@ -59,95 +65,95 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
         }
         NodeType::Arith_Expr => {
 
-            assert!(parse_tree.properties.contains_key("terminal"));
+            assert!(current_node.properties.contains_key("terminal"));
             //Left operand is a constant
             
             //Move it into a register
-            let term_node : &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, term_node, symbol_table, register_manager);
+            let term_node : &mut Node = &mut current_node.children[0];
+            generate(program_string, term_node, symbol_table, register_manager);
             let reg_name : String = term_node.properties["register"].clone();
 
 
-            let subexpr_node : &mut Node = &mut parse_tree.children[1];
+            let subexpr_node : &mut Node = &mut current_node.children[1];
 
             subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate_from_tree(program_string, subexpr_node, symbol_table, register_manager);
+            generate(program_string, subexpr_node, symbol_table, register_manager);
             let result_reg : String = 
-            if parse_tree.children[1].properties.contains_key("register") {
-                parse_tree.children[1].properties["register"].clone()
+            if current_node.children[1].properties.contains_key("register") {
+                current_node.children[1].properties["register"].clone()
             }
             else {
                 reg_name
             };
-            parse_tree.properties.insert("register".to_string(), result_reg);
+            current_node.properties.insert("register".to_string(), result_reg);
 
         }
         NodeType::Arith_Subexpr => {
-            if parse_tree.properties.contains_key("operator") {
-                let operator : String = parse_tree.properties["operator"].clone();
+            if current_node.properties.contains_key("operator") {
+                let operator : String = current_node.properties["operator"].clone();
 
                 /* Generate term node completely, so all multiplication, division, and parenthesis
                 are given priority before addition, subtraction */
-                let term_node : &mut Node = &mut parse_tree.children[1];
-                generate_from_tree(program_string, term_node, symbol_table, register_manager);
+                let term_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, term_node, symbol_table, register_manager);
                 //The register that stores the result from evaluating term is stored in the result property
                 let result_reg : String = term_node.properties["register"].clone();
 
-                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), parse_tree.properties["prev_register"].clone(), result_reg).as_str());
+                program_string.push_str(format!("\t{} {}, {}\n", to_operator(operator), current_node.properties["prev_register"].clone(), result_reg).as_str());
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
                 //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
-                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let subexpr_node : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, subexpr_node, symbol_table, register_manager);
+                let subexpr_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, subexpr_node, symbol_table, register_manager);
             }
-            else if parse_tree.properties.contains_key("terminal") {
-                let term_node : &mut Node = &mut parse_tree.children[0];
-                generate_from_tree(program_string, term_node, symbol_table, register_manager);
+            else if current_node.properties.contains_key("terminal") {
+                let term_node : &mut Node = &mut current_node.children[0];
+                generate(program_string, term_node, symbol_table, register_manager);
 
                 let result_reg : String = term_node.properties["register"].clone();
-                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+                current_node.properties.insert("register".to_string(), result_reg.clone());
             }
 
             //TODO: Add terminal case for when subexprs end
         }
         NodeType::Arith_Term => {
             
-            assert!(parse_tree.properties.contains_key("terminal"));
+            assert!(current_node.properties.contains_key("terminal"));
 
             //Left operand is a constant
                 
             //Move it into a register
-            let factor_node : &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+            let factor_node : &mut Node = &mut current_node.children[0];
+            generate(program_string, factor_node, symbol_table, register_manager);
             let reg_name : String = factor_node.properties["register"].clone();
 
-            let mut subterm_node : &mut Node = &mut parse_tree.children[1];
+            let mut subterm_node : &mut Node = &mut current_node.children[1];
 
             subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
 
-            generate_from_tree(program_string, &mut subterm_node, symbol_table, register_manager);
+            generate(program_string, &mut subterm_node, symbol_table, register_manager);
             let result_reg : String = 
-            if parse_tree.children[1].properties.contains_key("register") {
-                parse_tree.children[1].properties["register"].clone()
+            if current_node.children[1].properties.contains_key("register") {
+                current_node.children[1].properties["register"].clone()
             }
             else {
                 reg_name
             };
-            parse_tree.properties.insert("register".to_string(), result_reg);
+            current_node.properties.insert("register".to_string(), result_reg);
             //Free allocated register
         }
         NodeType::Arith_Subterm => {
-            if parse_tree.properties.contains_key("operator") {
-                let operator : String = parse_tree.properties["operator"].clone();
+            if current_node.properties.contains_key("operator") {
+                let operator : String = current_node.properties["operator"].clone();
 
                 /* Generate term node completely, so all multiplication, division, and parenthesis
                 are given priority before addition, subtraction */
-                let factor_node : &mut Node = &mut parse_tree.children[1];
-                generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+                let factor_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, factor_node, symbol_table, register_manager);
                 //The register that stores the result from evaluating term is stored in the result property
                 let result_reg : String = factor_node.properties["register"].clone();
 
@@ -157,42 +163,42 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 if operator == "/".to_string() {
                     program_string.push_str("\tmov rdx, 0\n");
                 }
-                program_string.push_str(format!("\tmov rax, {}\n", parse_tree.properties["prev_register"].clone()).as_str());
+                program_string.push_str(format!("\tmov rax, {}\n", current_node.properties["prev_register"].clone()).as_str());
                 program_string.push_str(format!("\t{} {}\n", to_operator(operator), result_reg).as_str());
-                program_string.push_str(format!("\tmov {}, rax\n", parse_tree.properties["prev_register"].clone()).as_str());
+                program_string.push_str(format!("\tmov {}, rax\n", current_node.properties["prev_register"].clone()).as_str());
                 //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
-                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
                 
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                let subterm_node : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, subterm_node, symbol_table, register_manager);
+                let subterm_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, subterm_node, symbol_table, register_manager);
             }
-            else if parse_tree.properties.contains_key("terminal"){
-                let factor_node : &mut Node = &mut parse_tree.children[0];
-                generate_from_tree(program_string, factor_node, symbol_table, register_manager);
+            else if current_node.properties.contains_key("terminal"){
+                let factor_node : &mut Node = &mut current_node.children[0];
+                generate(program_string, factor_node, symbol_table, register_manager);
 
                 let result_reg : String = factor_node.properties["register"].clone();
-                parse_tree.properties.insert("register".to_string(), result_reg.clone());
+                current_node.properties.insert("register".to_string(), result_reg.clone());
             }
             
             //TODO: Add terminal case for when factor_node end
         }
         NodeType::Arith_Factor => {
-            let operand : String = parse_tree.properties["terminal"].clone();
+            let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
                 
 
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
                 let reg_name : String = register_manager.register_name(reg_index);
 
-                let offset : i32 = symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr.clone() as i32;
+                let offset : i32 = symbol_table.query(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
                 program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
                 
-                symbol_table.modify_register(&parse_tree.properties["terminal"], register_manager.register_index(&reg_name.clone()));
-                parse_tree.properties.insert("register".to_string(), reg_name);
+                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
@@ -201,142 +207,142 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 //Move it into a register
                 program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
 
-                parse_tree.properties.insert("register".to_string(), reg_name);
+                current_node.properties.insert("register".to_string(), reg_name);
             }
         }
         NodeType::Bool_Expr => {
-            assert!(parse_tree.properties.contains_key("terminal"));
-            let bool_term_node: &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, bool_term_node, symbol_table, register_manager);
+            assert!(current_node.properties.contains_key("terminal"));
+            let bool_term_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, bool_term_node, symbol_table, register_manager);
             let reg_name : String = bool_term_node.properties["register"].clone();
 
 
-            let bool_subexpr_node: &mut Node = &mut parse_tree.children[1];
+            let bool_subexpr_node: &mut Node = &mut current_node.children[1];
             bool_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate_from_tree(program_string, bool_subexpr_node, symbol_table, register_manager);
+            generate(program_string, bool_subexpr_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if parse_tree.children[1].properties.contains_key("register") {
-                parse_tree.children[1].properties["register"].clone()
+            if current_node.children[1].properties.contains_key("register") {
+                current_node.children[1].properties["register"].clone()
             }
             else {
                 reg_name
             };
-            parse_tree.properties.insert("register".to_string(), result_reg);
+            current_node.properties.insert("register".to_string(), result_reg);
         }
         NodeType::Bool_Subexpr => {
-            if parse_tree.properties.contains_key("operator") {
-                let operator : String = parse_tree.properties["operator"].clone();
+            if current_node.properties.contains_key("operator") {
+                let operator : String = current_node.properties["operator"].clone();
 
-                let bool_term_node : &mut Node = &mut parse_tree.children[1];
-                generate_from_tree(program_string, bool_term_node, symbol_table, register_manager);
+                let bool_term_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, bool_term_node, symbol_table, register_manager);
                 let result_reg : String = bool_term_node.properties["register"].clone();
 
-                and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
+                and_or_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
-                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subexpr_node : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, bool_subexpr_node, symbol_table, register_manager);
+                let bool_subexpr_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, bool_subexpr_node, symbol_table, register_manager);
             }
         }
         NodeType::Bool_Term => {
-            assert!(parse_tree.properties.contains_key("terminal"));
+            assert!(current_node.properties.contains_key("terminal"));
 
-            let bool_factor_node: &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, bool_factor_node, symbol_table, register_manager);
+            let bool_factor_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, bool_factor_node, symbol_table, register_manager);
             let reg_name : String = bool_factor_node.properties["register"].clone();
 
 
-            let bool_subterm_node: &mut Node = &mut parse_tree.children[1];
+            let bool_subterm_node: &mut Node = &mut current_node.children[1];
             bool_subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate_from_tree(program_string, bool_subterm_node, symbol_table, register_manager);
+            generate(program_string, bool_subterm_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if parse_tree.children[1].properties.contains_key("register") {
-                parse_tree.children[1].properties["register"].clone()
+            if current_node.children[1].properties.contains_key("register") {
+                current_node.children[1].properties["register"].clone()
             }
             else {
                 reg_name
             };
-            parse_tree.properties.insert("register".to_string(), result_reg);
+            current_node.properties.insert("register".to_string(), result_reg);
         }
         NodeType::Bool_Subterm => {
-            if parse_tree.properties.contains_key("operator") {
-                let operator : String = parse_tree.properties["operator"].clone();
+            if current_node.properties.contains_key("operator") {
+                let operator : String = current_node.properties["operator"].clone();
 
-                let bool_factor_node : &mut Node = &mut parse_tree.children[1];
-                generate_from_tree(program_string, bool_factor_node, symbol_table, register_manager);
+                let bool_factor_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, bool_factor_node, symbol_table, register_manager);
                 let result_reg : String = bool_factor_node.properties["register"].clone();
 
-                and_or_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
+                and_or_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
-                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subterm_node : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, bool_subterm_node, symbol_table, register_manager);
+                let bool_subterm_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, bool_subterm_node, symbol_table, register_manager);
             }
         }
         NodeType::Bool_Factor => {
-            assert!(parse_tree.properties.contains_key("terminal"));
-            let bool_operand_node: &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, bool_operand_node, symbol_table, register_manager);
+            assert!(current_node.properties.contains_key("terminal"));
+            let bool_operand_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, bool_operand_node, symbol_table, register_manager);
             let reg_name : String = bool_operand_node.properties["register"].clone();
 
 
-            let bool_subfactor_node: &mut Node = &mut parse_tree.children[1];
+            let bool_subfactor_node: &mut Node = &mut current_node.children[1];
             bool_subfactor_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate_from_tree(program_string, bool_subfactor_node, symbol_table, register_manager);
+            generate(program_string, bool_subfactor_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if parse_tree.children[1].properties.contains_key("register") {
-                parse_tree.children[1].properties["register"].clone()
+            if current_node.children[1].properties.contains_key("register") {
+                current_node.children[1].properties["register"].clone()
             }
             else {
                 reg_name
             };
-            parse_tree.properties.insert("register".to_string(), result_reg);
+            current_node.properties.insert("register".to_string(), result_reg);
         }
         NodeType::Bool_Subfactor => {
-            if parse_tree.properties.contains_key("operator") {
-                let operator : String = parse_tree.properties["operator"].clone();
+            if current_node.properties.contains_key("operator") {
+                let operator : String = current_node.properties["operator"].clone();
 
-                let bool_operand_node : &mut Node = &mut parse_tree.children[1];
-                generate_from_tree(program_string, bool_operand_node, symbol_table, register_manager);
+                let bool_operand_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, bool_operand_node, symbol_table, register_manager);
                 let result_reg : String = bool_operand_node.properties["register"].clone();
 
-                equality_generator(program_string, &operator, &parse_tree.properties["prev_register"], &result_reg);
+                equality_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                parse_tree.children[2].properties.insert("prev_register".to_string(), parse_tree.properties["prev_register"].clone());
-                parse_tree.properties.insert("register".to_string(), parse_tree.properties["prev_register"].clone());
+                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subfactor_node : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, bool_subfactor_node, symbol_table, register_manager);
+                let bool_subfactor_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, bool_subfactor_node, symbol_table, register_manager);
             }
         }
         NodeType::Bool_Operand => {
-            let operand : String = parse_tree.properties["terminal"].clone();
+            let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
                 let reg_name : String = register_manager.register_name(reg_index);
 
-                let offset : i32 = symbol_table.query(&parse_tree.properties["terminal"]).unwrap().addr.clone() as i32;
+                let offset : i32 = symbol_table.query(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
                 program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
                 
-                if parse_tree.properties.contains_key("unary") {
+                if current_node.properties.contains_key("unary") {
                     program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                 }
 
-                symbol_table.modify_register(&parse_tree.properties["terminal"], register_manager.register_index(&reg_name.clone()));
-                parse_tree.properties.insert("register".to_string(), reg_name);
+                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
                 //Left operand is a constant
@@ -347,22 +353,22 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 
                 //Move it into a register
                 program_string.push_str(format!("\tmov qword {}, {}\n", reg_name, operand).as_str());
-                if parse_tree.properties.contains_key("unary") {
+                if current_node.properties.contains_key("unary") {
                     program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                 }
-                parse_tree.properties.insert("register".to_string(), reg_name);
+                current_node.properties.insert("register".to_string(), reg_name);
             }
         }
         NodeType::Relational_Expr => {
-            let arith_node_left : &mut Node = &mut parse_tree.children[0];
-            generate_from_tree(program_string, arith_node_left, symbol_table, register_manager);
+            let arith_node_left : &mut Node = &mut current_node.children[0];
+            generate(program_string, arith_node_left, symbol_table, register_manager);
             let left_reg : String = arith_node_left.properties["register"].clone();
 
-            let arith_node_right : &mut Node = &mut parse_tree.children[2];
-            generate_from_tree(program_string, arith_node_right, symbol_table, register_manager);
+            let arith_node_right : &mut Node = &mut current_node.children[2];
+            generate(program_string, arith_node_right, symbol_table, register_manager);
             let right_reg : String = arith_node_right.properties["register"].clone();
 
-            let operator : String = parse_tree.properties["operator"].clone();
+            let operator : String = current_node.properties["operator"].clone();
 
             let label_true : String = label_name(label_create());
             let label_done : String = label_name(label_create());
@@ -377,35 +383,35 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             program_string.push_str(format!("\tmov {}, 1\n", left_reg).as_str());
             program_string.push_str(format!("{}:\n", label_done).as_str());
 
-            parse_tree.properties.insert("register".to_string(), left_reg);
+            current_node.properties.insert("register".to_string(), left_reg);
             
         }
         NodeType::Condition_Expr => {
-            let expr_node : &mut Node = &mut parse_tree.children[0];
+            let expr_node : &mut Node = &mut current_node.children[0];
 
-            generate_from_tree(program_string, expr_node, symbol_table, register_manager);
+            generate(program_string, expr_node, symbol_table, register_manager);
 
-            parse_tree.properties.insert("register".to_string(), expr_node.properties["register"].clone());
+            current_node.properties.insert("register".to_string(), expr_node.properties["register"].clone());
 
         }
         NodeType::Expression => {
-            let expr_node : &mut Node = &mut parse_tree.children[0];
+            let expr_node : &mut Node = &mut current_node.children[0];
 
-            generate_from_tree(program_string, expr_node, symbol_table, register_manager);
+            generate(program_string, expr_node, symbol_table, register_manager);
 
-            parse_tree.properties.insert("register".to_string(), expr_node.properties["register"].clone());
+            current_node.properties.insert("register".to_string(), expr_node.properties["register"].clone());
 
         }
         NodeType::If_Stmt => {
 
-            let cond_expr : &mut Node = &mut parse_tree.children[2];
-            generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
+            let cond_expr : &mut Node = &mut current_node.children[2];
+            generate(program_string, cond_expr, symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
             let end_label : String = label_name(label_create());
             let mut next_label : String = end_label.clone();
 
-            let elif_stmt : &mut Node = &mut parse_tree.children[7];
+            let elif_stmt : &mut Node = &mut current_node.children[7];
 
             if elif_stmt.children.len() > 0 {
                 next_label = label_name(label_create());
@@ -416,36 +422,36 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             program_string.push_str(format!("\tje {}\n", next_label).as_str());
 
             //Generate code for body and extra statement to allow jumping to end
-            let body : &mut Node = &mut parse_tree.children[5];
-            generate_from_tree(program_string, body, symbol_table, register_manager);
+            let body : &mut Node = &mut current_node.children[5];
+            generate(program_string, body, symbol_table, register_manager);
             program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
             program_string.push_str(format!("{}:\n", next_label).as_str());
             
-            let elif_stmt : &mut Node = &mut parse_tree.children[7];
+            let elif_stmt : &mut Node = &mut current_node.children[7];
             //Pass end label to elif and else statements to make sure they can also jump to end
             elif_stmt.properties.insert("end_label".to_string(), end_label.clone());
             //Generate code for elif and else statements
-            generate_from_tree(program_string, elif_stmt, symbol_table, register_manager);
+            generate(program_string, elif_stmt, symbol_table, register_manager);
 
             //Generate the actual end label
             program_string.push_str(format!("{}:\n", end_label).as_str());
         }
         NodeType::Elif_Stmt => {
-            if parse_tree.children.len() == 1 {
+            if current_node.children.len() == 1 {
                 //Then just pass through the generation to the else_stmt node
-                let else_stmt : &mut Node = &mut parse_tree.children[0];
-                else_stmt.properties.insert("end_label".to_string(), parse_tree.properties["end_label"].clone());
-                generate_from_tree(program_string, else_stmt, symbol_table, register_manager);
+                let else_stmt : &mut Node = &mut current_node.children[0];
+                else_stmt.properties.insert("end_label".to_string(), current_node.properties["end_label"].clone());
+                generate(program_string, else_stmt, symbol_table, register_manager);
             }
-            else if parse_tree.children.len() > 1{
-                let cond_expr : &mut Node = &mut parse_tree.children[2];
-                generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
+            else if current_node.children.len() > 1{
+                let cond_expr : &mut Node = &mut current_node.children[2];
+                generate(program_string, cond_expr, symbol_table, register_manager);
                 let cond_reg : String = cond_expr.properties["register"].clone();
 
-                let end_label : String = parse_tree.properties["end_label"].clone();
+                let end_label : String = current_node.properties["end_label"].clone();
                 let mut next_label : String = end_label.clone();
 
-                let elif_stmt : &mut Node = &mut parse_tree.children[7];
+                let elif_stmt : &mut Node = &mut current_node.children[7];
 
                 if elif_stmt.children.len() > 0 {
                     next_label = label_name(label_create());
@@ -456,16 +462,16 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
                 program_string.push_str(format!("\tje {}\n", next_label).as_str());
                 
                 //Generate code for body and extra statement to allow jumping to end
-                let body : &mut Node = &mut parse_tree.children[5];
-                generate_from_tree(program_string, body, symbol_table, register_manager);
+                let body : &mut Node = &mut current_node.children[5];
+                generate(program_string, body, symbol_table, register_manager);
                 program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
                 program_string.push_str(format!("{}:\n", next_label).as_str());
                 
-                let elif_stmt : &mut Node = &mut parse_tree.children[7];
+                let elif_stmt : &mut Node = &mut current_node.children[7];
                 //Pass end label to elif and else statements to make sure they can also jump to end
                 elif_stmt.properties.insert("end_label".to_string(), end_label.clone());
                 //Generate code for elif and else statements
-                generate_from_tree(program_string, elif_stmt, symbol_table, register_manager);
+                generate(program_string, elif_stmt, symbol_table, register_manager);
             }
         }
         NodeType::While_Stmt => {
@@ -475,15 +481,15 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
 
             program_string.push_str(format!("{}:\n", start_label).as_str());
 
-            let cond_expr : &mut Node = &mut parse_tree.children[2];
-            generate_from_tree(program_string, cond_expr, symbol_table, register_manager);
+            let cond_expr : &mut Node = &mut current_node.children[2];
+            generate(program_string, cond_expr, symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
             program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
             program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
-            let body_node : &mut Node = &mut parse_tree.children[5];
-            generate_from_tree(program_string, body_node, symbol_table, register_manager);
+            let body_node : &mut Node = &mut current_node.children[5];
+            generate(program_string, body_node, symbol_table, register_manager);
 
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
@@ -492,40 +498,40 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
         NodeType::For_Stmt => {
 
 
-            let optional_expr_1 : &mut Node = &mut parse_tree.children[2];
-            generate_from_tree(program_string, optional_expr_1, symbol_table, register_manager);
+            let optional_expr_1 : &mut Node = &mut current_node.children[2];
+            generate(program_string, optional_expr_1, symbol_table, register_manager);
 
             let start_label : String = label_name(label_create());
             let done_label : String = label_name(label_create());
 
             program_string.push_str(format!("{}:\n", start_label).as_str());
 
-            let optional_expr_2 : &mut Node = &mut parse_tree.children[4];
-            generate_from_tree(program_string, optional_expr_2, symbol_table, register_manager);
+            let optional_expr_2 : &mut Node = &mut current_node.children[4];
+            generate(program_string, optional_expr_2, symbol_table, register_manager);
             let cond_reg : String = optional_expr_2.children[0].properties["register"].clone();
 
             program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
             program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
-            let body_node : &mut Node = &mut parse_tree.children[9];
-            generate_from_tree(program_string, body_node, symbol_table, register_manager);
+            let body_node : &mut Node = &mut current_node.children[9];
+            generate(program_string, body_node, symbol_table, register_manager);
 
-            let optional_expr_3 : &mut Node = &mut parse_tree.children[6];
-            generate_from_tree(program_string, optional_expr_3, symbol_table, register_manager);
+            let optional_expr_3 : &mut Node = &mut current_node.children[6];
+            generate(program_string, optional_expr_3, symbol_table, register_manager);
 
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
         }
         NodeType::VarDecl => {            
             program_string.push_str("\tpush 0\n");
-            generate_children(program_string, parse_tree, symbol_table, register_manager);
+            generate_children(program_string, current_node, symbol_table, register_manager);
             
             
-            // let offset : i32 = symbol_table.query(&parse_tree.properties["identifier"]).unwrap().addr.clone() as i32;
+            // let offset : i32 = symbol_table.query(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
 
-            // if parse_tree.children[1].properties.contains_key("identifier") {
-            //     let register_name : String =  parse_tree.children[1].properties["register"].clone();
-            //     symbol_table.modify_register(&parse_tree.properties["identifier"], register_manager.register_index(&register_name.clone()));
+            // if current_node.children[1].properties.contains_key("identifier") {
+            //     let register_name : String =  current_node.children[1].properties["register"].clone();
+            //     symbol_table.modify_register(&current_node.properties["identifier"], register_manager.register_index(&register_name.clone()));
             //     program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
                 
             //     register_manager.register_free(register_manager.register_index(&register_name) as u32);
@@ -533,9 +539,9 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
         }
         NodeType::Return_Stmt => {
-            generate_children(program_string, parse_tree, symbol_table, register_manager);
-            if parse_tree.children[1].properties.contains_key("terminal") {
-                let operand : String = parse_tree.children[1].properties["terminal"].clone();
+            generate_children(program_string, current_node, symbol_table, register_manager);
+            if current_node.children[1].properties.contains_key("terminal") {
+                let operand : String = current_node.children[1].properties["terminal"].clone();
                 let source : String;
                 if is_identifier(&operand) {
                     //Then we have an identifier
@@ -554,15 +560,15 @@ fn generate_from_tree(program_string : &mut String, parse_tree : &mut Node, symb
             
         }        
         _ => {
-            generate_children(program_string, parse_tree, symbol_table, register_manager);
+            generate_children(program_string, current_node, symbol_table, register_manager);
         }
 
     }
 }
 
-fn generate_children(program_string : &mut String, parse_tree : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
-    for mut node in &mut parse_tree.children {
-        generate_from_tree(program_string, &mut node, symbol_table, register_manager);
+fn generate_children(program_string : &mut String, current_node : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
+    for mut node in &mut current_node.children {
+        generate(program_string, &mut node, symbol_table, register_manager);
     }
 }
 

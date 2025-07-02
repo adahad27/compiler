@@ -77,7 +77,7 @@ use crate::token_c::{TokenType, Token};
 use crate::expression_c::{*};
 use crate::statement_c::{*};
 
-static mut CURRENT_TOKEN_INDEX : u32 = 0; 
+static mut CURRENT_TOKEN_INDEX : u32 = 0;
 
 //This function returns the size of a primitive based on the declared type
 fn get_primitive_size(prim : &String) -> u32 {
@@ -159,7 +159,11 @@ impl SymbolTable {
     }
 
 }
-
+/*
+TODO: Will need to fix scoping issues by implementing a doubly linked
+spaghetti stack (Parent Pointer Tree). For now all scoping will be shared
+globally.
+ */
 pub struct STManager {
     pub stack : Vec<SymbolTable>
 }
@@ -393,6 +397,8 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut body_node, tokens, symbol_table) &&
     parse(&mut close_curly_node, tokens, symbol_table)
     {
+        symbol_table.insert(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
+        
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
         current_node.children.push(open_paren_node);
@@ -401,6 +407,8 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         current_node.children.push(open_curly_node);
         current_node.children.push(body_node);
         current_node.children.push(close_curly_node);
+
+        
         
         return true;
     }
