@@ -10,9 +10,10 @@ This is the grammer that is currently being implemeted by the parser:
     x before a rule means it was noted but not used.
     Assume that functions don't have parameters/arguments.
 
-    program_start -> function declaration
-x   function declaration -> primitive identifier (arguments);
-    function declaration -> primitive identifier (arguments){body}
+    program_start -> other_decl
+x   func_decl -> primitive identifier (arguments);
+    func_decl -> primitive identifier (arguments){body}
+    other_decl -> [func_decl other_decl] | empty
     
     arguments -> primitive identifier, arguments | empty
 
@@ -219,7 +220,8 @@ impl STManager {
 pub enum NodeType {
     
     Program_Start,
-    Function_Declaration,
+    Func_Decl,
+    Other_Decl,
     Arguments,
     Primitive,
     Identifier,
@@ -278,7 +280,9 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut
 
         NodeType::Program_Start => parse_start_node(current_node, tokens, symbol_table),
         
-        NodeType::Function_Declaration => parse_func_decl(current_node, tokens, symbol_table),
+        NodeType::Other_Decl => parse_other_decl(current_node, tokens, symbol_table),
+
+        NodeType::Func_Decl => parse_func_decl(current_node, tokens, symbol_table),
 
         NodeType::Arguments => parse_arguments(current_node, tokens, symbol_table),
 
@@ -353,7 +357,7 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut
 
 fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
     //Create a new node of type function declaration            
-    let mut function_declaration_node : Node = create_node(NodeType::Function_Declaration);
+    let mut other_decl_node : Node = create_node(NodeType::Other_Decl);
 
     
     /* 
@@ -362,13 +366,11 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table
     must backtrack.
     */
 
-    if parse(&mut function_declaration_node, tokens, symbol_table) {
-        current_node.children.push(function_declaration_node);
+    if parse(&mut other_decl_node, tokens, symbol_table) {
+        current_node.children.push(other_decl_node);
         return true;
     }
-    else {
-        return false;
-    }
+    return false;
 }
 
 fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
@@ -454,6 +456,27 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         return true;
     }
 
+
+    return false;
+}
+
+fn parse_other_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+
+    let mut func_decl_node: Node = create_node(NodeType::Func_Decl);
+    let mut other_decl_node : Node = create_node(NodeType::Other_Decl);
+
+    if get_current_token_index() == tokens.len() {
+        return true;
+    }
+    else if 
+    parse(&mut func_decl_node, tokens, symbol_table) &&
+    parse(&mut other_decl_node, tokens, symbol_table) {
+
+        current_node.children.push(func_decl_node);
+        current_node.children.push(other_decl_node);
+
+        return true;
+    }
 
     return false;
 }

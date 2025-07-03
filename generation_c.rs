@@ -28,7 +28,7 @@ pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table 
 }
 
 fn generate_start_stub(program_string : &mut String, table : &mut SymbolTable) {
-
+    
     for (identifier, symbol) in table.symbol_table.iter() {
         if symbol.func {
             program_string.push_str(format!("global {}\n", identifier).as_str());
@@ -38,11 +38,11 @@ fn generate_start_stub(program_string : &mut String, table : &mut SymbolTable) {
 
 fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
     match current_node.node_type {
-        NodeType::Function_Declaration => {
+        NodeType::Func_Decl => {
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
             generate_children(program_string, current_node, symbol_table, register_manager);
-            program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret").as_str());
+            program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
             
         }
         NodeType::Assign_Expr => {

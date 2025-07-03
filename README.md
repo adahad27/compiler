@@ -16,3 +16,6 @@ Planned features of <C:
 2. Function declarations, definitions, and calls
 3. Arrays (Stack allocated)
 
+Compiler Specifics:
+This Compiler uses an LL(1) Recursive Descent Parser to create an Abstract Syntax Tree. For now, there is no conversion to an Intermediate Representation.
+It uses a Post-Order Traversal of the AST to generate the necesary x86 ASM. For register allocation, Linear Scanning will be implemented first, Graph Coloring is being considered.
