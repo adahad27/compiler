@@ -1,8 +1,10 @@
 /* This file will contain all necessary code to parse all types of expressions */
 use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index, prev_token_index}, token_c::{is_operator, is_separator, Token}};
 use crate::symbol_table_c::{*};
+use std::rc::Rc;
 
-pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+
+pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut arith_term_node : Node = create_node(NodeType::Arith_Term);
     let mut arith_subexpr_node : Node = create_node(NodeType::Arith_Subexpr);
@@ -27,7 +29,7 @@ pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
     return false;
 }
 
-pub fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     arith_subexpr -> [+ term arith_subexpr] | [- term arith_subexpr] | term | empty
@@ -71,7 +73,7 @@ pub fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbo
     return false;
 }
 
-pub fn parse_arith_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_arith_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     arith_term -> constant | identifier subarith_term
@@ -97,7 +99,7 @@ pub fn parse_arith_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
     return false;
 }
 
-pub fn parse_arith_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_arith_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
@@ -141,7 +143,7 @@ pub fn parse_arith_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbo
     return false;
 }
 
-pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     Arith_Factor -> constant | identifier | (expression)
@@ -160,7 +162,7 @@ pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut bool_term_node : Node = create_node(NodeType::Bool_Term);
     let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
@@ -183,7 +185,7 @@ pub fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return false;
 }
 
-pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     /* 
     Production rules:
@@ -216,7 +218,7 @@ pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut bool_factor_node : Node = create_node(NodeType::Bool_Factor);
     let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
@@ -239,7 +241,7 @@ pub fn parse_bool_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return false;
 }
 
-pub fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     bool_subterm -> [&& bool_factor bool_subterm] | empty
@@ -272,7 +274,7 @@ pub fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut bool_operand_node : Node = create_node(NodeType::Bool_Operand);
     let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
@@ -295,7 +297,7 @@ pub fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_
     return false;
 }
 
-pub fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
     bool_subfactor -> [[== | !=] bool_operand bool_subfactor] | empty
@@ -330,7 +332,7 @@ pub fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<Token>, symb
     return false;
 }
 
-pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     
     let mut operator_node : Node = create_node(NodeType::Operator);
     // let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
@@ -369,7 +371,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     }
     else if 
     parse(&mut identifier_node, tokens, symbol_table) {
-        if symbol_table.query(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+        if symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
             current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
             current_node.children.push(identifier_node);
             return true;
@@ -380,7 +382,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let (mut arith_expr_left, mut arith_expr_right) = (create_node(NodeType::Arith_Expr), create_node(NodeType::Arith_Expr));
     let mut operator_node : Node = create_node(NodeType::Operator);
@@ -402,7 +404,7 @@ pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, sym
     return false;
 }
 
-pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
     let mut rel_expr_node : Node = create_node(NodeType::Relational_Expr);
 
@@ -422,7 +424,7 @@ pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 }
 
 
-pub fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut expr: Node = create_node(NodeType::Expression);
     let mut assign_expr : Node = create_node(NodeType::Assign_Expr);
@@ -447,7 +449,7 @@ pub fn parse_optional_expr(current_node : &mut Node, tokens : &Vec<Token>, symbo
     return false;
 }
 
-pub fn parse_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut arith_expr : Node = create_node(NodeType::Arith_Expr);
     let mut conditional_expr : Node = create_node(NodeType::Condition_Expr);
@@ -465,7 +467,7 @@ pub fn parse_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table :
     return false;
 }
 
-pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     let mut expr_node : Node = create_node(NodeType::Arith_Expr);
     let mut identity_node : Node = create_node(NodeType::Identifier);
     let mut operator_node : Node = create_node(NodeType::Operator);
@@ -473,10 +475,10 @@ pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_
 
     if parse(&mut identity_node, tokens, symbol_table) {
 
-        if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
+        if symbol_table.scope_lookup(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {
             expr_node = create_node(NodeType::Arith_Expr);
         }
-        else if symbol_table.query(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+        else if symbol_table.scope_lookup(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
             expr_node = create_node(NodeType::Condition_Expr);
         }
 

@@ -54,8 +54,8 @@ globally.
 
 pub struct STNode {
     table : RefCell<SymbolTable>,
-    parent : Option<RefCell<Weak<STNode>>>,
-    children : RefCell<Vec<Rc<STNode>>>
+    pub parent : Option<RefCell<Weak<STNode>>>,
+    pub children : RefCell<Vec<Rc<STNode>>>
 }
 
 pub trait tree_methods {
@@ -63,24 +63,30 @@ pub trait tree_methods {
     
     fn get_table(&self) -> RefMut<SymbolTable>;
 
-    fn scope_lookup(&self, identifier : String) -> Option<Symbol>;
+    fn scope_lookup(&self, identifier : &String) -> Option<Symbol>;
 
     fn bind(&self, identifier : &String, prim : &String, func : bool);
+
+}
+
+pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
+    let sym_tab: SymbolTable = SymbolTable {
+        symbol_table : HashMap::new(),
+        ordinal : ordinal
+    };
+
+    return Rc::new(STNode {
+        table : RefCell::new(sym_tab),
+        parent : Option::Some(RefCell::new(Weak::new())),
+        children : RefCell::new(Vec::new())
+    })
 }
 
 impl tree_methods for Rc<STNode> {
+
     fn push_child(&self, ordinal : u32) {
         
-        let sym_tab: SymbolTable = SymbolTable {
-            symbol_table : HashMap::new(),
-            ordinal : ordinal
-        };
-
-        let child: Rc<STNode> = Rc::new(STNode{
-            table : RefCell::new(sym_tab),
-            parent : Option::Some(RefCell::new(Weak::new())),
-            children : RefCell::new(Vec::new())
-        });
+        let child: Rc<STNode> = create_new_STNode(ordinal);
 
         *child.parent.as_ref().unwrap().borrow_mut() = Rc::downgrade(&self);
         self.children.borrow_mut().push(child);
@@ -91,7 +97,7 @@ impl tree_methods for Rc<STNode> {
         return self.table.borrow_mut();
     }
 
-    fn scope_lookup(&self, identifier : String) -> Option<Symbol> {
+    fn scope_lookup(&self, identifier : &String) -> Option<Symbol> {
         
         if let Option::Some(symbol) = self.table.borrow().query(&identifier) {
             return Option::Some(symbol.clone());
@@ -114,54 +120,4 @@ impl tree_methods for Rc<STNode> {
         self.table.borrow_mut().insert(identifier, prim, func);
     }
 
-}
-
-pub struct STManager {
-    pub stack : Vec<SymbolTable>
-}
-
-impl STManager {
-    pub fn scope_enter(&mut self, new_frame : bool) {
-        let mut new_st : SymbolTable;
-        if new_frame {
-            new_st = SymbolTable{symbol_table : HashMap::new(), ordinal : 1};
-        }
-        else {
-            assert!(self.stack.len() > 0);
-            new_st = SymbolTable{symbol_table : HashMap::new(), ordinal : self.stack[self.stack.len() - 1].ordinal}
-        }
-        self.stack.push(new_st);
-    }
-
-    pub fn scope_exit(&mut self) {
-        self.stack.pop();
-    }
-
-    pub fn scope_level(&self) -> u32{
-        return self.stack.len() as u32;
-    }
-
-    pub fn scope_bind(&mut self, identifier : &String, prim : &String, func : bool) {
-        let index : usize = self.stack.len() - 1;
-        self.stack[index].insert(identifier, prim, func);
-    }
-
-    pub fn scope_lookup(&self, identifier :&String) -> Option<&Symbol>{
-        let mut index : usize = self.stack.len() - 1;
-        while index > 0 {
-            if let Option::Some(symbol) = self.stack[index].query(identifier) {
-                return Option::Some(symbol);
-            }
-            index -= 1;
-        }
-        return Option::None;
-    }
-
-    pub fn scope_lookup_current(&self, identifier : &String) -> Option<&Symbol> {
-        let index : usize = self.stack.len() - 1;
-        if let Option::Some(symbol) = self.stack[index].query(identifier) {
-            return Option::Some(symbol);
-        }
-        return Option::None;
-    }
 }

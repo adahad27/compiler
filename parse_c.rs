@@ -73,6 +73,7 @@ x   expression -> identifier = expression
 */
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::token_c::{TokenType, Token};
 use crate::expression_c::{*};
@@ -179,7 +180,7 @@ pub fn create_node(n_type : NodeType) -> Node {
 
 
 
-pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool{
+pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool{
 
     match current_node.node_type {
 
@@ -260,7 +261,7 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut
 
 }
 
-fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     //Create a new node of type function declaration            
     let mut other_decl_node : Node = create_node(NodeType::Other_Decl);
 
@@ -278,7 +279,13 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table
     return false;
 }
 
-fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
+
+    // symbol_table.push_child(1);
+    // let current_table = &symbol_table.children.borrow()[0];
+
+
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
@@ -304,7 +311,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut body_node, tokens, symbol_table) &&
     parse(&mut close_curly_node, tokens, symbol_table)
     {
-        symbol_table.insert(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
+        symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
         
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
@@ -336,7 +343,7 @@ fn parse_terminal(current_node : &mut Node, tokens : &Vec<Token>, tok_type : &To
 }
 
 
-fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut prim_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
@@ -365,7 +372,7 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     return false;
 }
 
-fn parse_other_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+fn parse_other_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut func_decl_node: Node = create_node(NodeType::Func_Decl);
     let mut other_decl_node : Node = create_node(NodeType::Other_Decl);

@@ -1,10 +1,10 @@
 /* This file will contain the code necessary to parse statements or 
 bodies of statements */
-
+use std::rc::Rc;
 use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index}, token_c::{is_primitive, is_identifier, Token}};
 use crate::symbol_table_c::{*};
 
-pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) ->bool {
+pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
 
     /* Include all rules for CFGs that have statements on the LHS here. */
     if tokens[get_current_token_index()].val == "return".to_string() {
@@ -73,7 +73,7 @@ pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return false;
 }
 
-pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) ->bool {
+pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identity_node : Node = create_node(NodeType::Identifier);
     
@@ -89,7 +89,7 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
         current_node.children.push(primitive_node);
 
         if is_identifier(&tokens[get_current_token_index()].val) {
-            symbol_table.insert(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"], false);
+            symbol_table.bind(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"], false);
         }
 
         if parse(&mut expr_node, tokens, symbol_table) {
@@ -118,7 +118,7 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
     return false;
 }
 
-pub fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) ->bool {
+pub fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
     let mut arith_expr_node : Node = create_node(NodeType::Arith_Expr);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
@@ -143,7 +143,7 @@ pub fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
    
 }
 
-pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) ->bool {
+pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
         if parse(&mut stmt_node, tokens, symbol_table)                 
@@ -161,7 +161,8 @@ pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table :
 
 
 
-pub fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
     let mut cond_node : Node = create_node(NodeType::Condition_Expr);
@@ -197,7 +198,8 @@ pub fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tabl
     return false;
 }
 
-pub fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
     if tokens[get_current_token_index()].val == "elif".to_string() {
         let mut keyword_node : Node = create_node(NodeType::Keyword);
         let mut open_paren_node : Node = create_node(NodeType::Separator);
@@ -244,8 +246,8 @@ pub fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return true;
 }
 
-pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
-
+pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
     if tokens[get_current_token_index()].val == "else".to_string() {
         let mut keyword_node : Node = create_node(NodeType::Keyword);
         let mut open_curly_node : Node = create_node(NodeType::Separator);
@@ -273,7 +275,8 @@ pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return true;
 }
 
-pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
     let mut cond_node : Node = create_node(NodeType::Condition_Expr);
@@ -306,7 +309,8 @@ pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
     return false;
 }
 
-pub fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
+pub fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    //New scope made here
 
     /* This is the structure of a for loop:
     for(init_expr ; expr ; next_expr) {

@@ -11,12 +11,13 @@ use crate::token_c::{lex_file, Token};
 use crate::generation_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};
 use crate::symbol_table_c::{*};
+use std::rc::Rc;
 
 
 fn main() {
 
 
-    let mut symbol_table : SymbolTable = SymbolTable{symbol_table : HashMap::new(), ordinal : 1};
+    let symbol_table = create_new_STNode(1);
     
     let path : String = "src_files/feature_testing/".to_string();
     let file : String = "test_bool.c".to_string();
@@ -27,11 +28,11 @@ fn main() {
 
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
-    if parse(&mut current_node, &token_list, &mut  symbol_table) {
+    if parse(&mut current_node, &token_list, &symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
         // let filename : String = "src_files/feature_testing/test_loops.asm".to_string();
-        generate_code(&filename, &mut current_node, &mut symbol_table);
+        generate_code(&filename, &mut current_node, &symbol_table);
     }
     else {
         println!("Sorry there was a parsing error!");

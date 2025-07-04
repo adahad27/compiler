@@ -4,14 +4,14 @@ it will combine both the intermediate and target code generation into one unit o
 logic
 */
 
-use std::{fs};
+use std::{fs, rc::Rc};
 
 use crate::{parse_c::{ Node, NodeType}, token_c::is_identifier};
 use crate::symbol_table_c::{*};
 
 static mut CURRENT_LABEL_INDEX : u32 = 0;
 
-pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table : &mut SymbolTable) {
+pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table : &Rc<STNode>) {
     let mut program_string : String = "".to_string();
 
     generate_start_stub(&mut program_string, symbol_table);
@@ -28,16 +28,16 @@ pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table 
 
 }
 
-fn generate_start_stub(program_string : &mut String, table : &mut SymbolTable) {
+fn generate_start_stub(program_string : &mut String, symbol_table : &Rc<STNode>) {
     
-    for (identifier, symbol) in table.symbol_table.iter() {
+    for (identifier, symbol) in symbol_table.get_table().symbol_table.iter() {
         if symbol.func {
             program_string.push_str(format!("global {}\n", identifier).as_str());
         }
     }
 }
 
-fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
+fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &Rc<STNode>, register_manager : &mut RegisterManager) {
     match current_node.node_type {
         NodeType::Func_Decl => {
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
@@ -54,10 +54,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
             let identifier : &mut Node = &mut current_node.children[0];
 
-            symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
+            // symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
             current_node.properties.insert("register".to_string(), reg_name.clone());
 
-            let offset : i32 = symbol_table.query(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
+            let offset : i32 = symbol_table.scope_lookup(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
             
             register_manager.register_free(register_manager.register_index(&reg_name) as u32);
 
@@ -195,10 +195,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
                 let reg_name : String = register_manager.register_name(reg_index);
 
-                let offset : i32 = symbol_table.query(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
+                let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
                 program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
                 
-                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                // symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
                 current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
@@ -335,14 +335,14 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
                 let reg_name : String = register_manager.register_name(reg_index);
 
-                let offset : i32 = symbol_table.query(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
+                let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
                 program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
                 
                 if current_node.properties.contains_key("unary") {
                     program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                 }
 
-                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                // symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
                 current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
@@ -528,16 +528,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate_children(program_string, current_node, symbol_table, register_manager);
             
             
-            // let offset : i32 = symbol_table.query(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
-
-            // if current_node.children[1].properties.contains_key("identifier") {
-            //     let register_name : String =  current_node.children[1].properties["register"].clone();
-            //     symbol_table.modify_register(&current_node.properties["identifier"], register_manager.register_index(&register_name.clone()));
-            //     program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, register_name).as_str());
-                
-            //     register_manager.register_free(register_manager.register_index(&register_name) as u32);
-            // }
-            
         }
         NodeType::Return_Stmt => {
             generate_children(program_string, current_node, symbol_table, register_manager);
@@ -546,7 +536,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 let source : String;
                 if is_identifier(&operand) {
                     //Then we have an identifier
-                    let register_name : String = register_manager.register_name(symbol_table.query(&operand).unwrap().register as u32);
+                    let register_name : String = register_manager.register_name(symbol_table.scope_lookup(&operand).unwrap().register as u32);
                     register_manager.register_free(register_manager.register_index(&register_name) as u32);
                     source = register_name;
                     
@@ -567,7 +557,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
     }
 }
 
-fn generate_children(program_string : &mut String, current_node : &mut Node, symbol_table : &mut SymbolTable, register_manager : &mut RegisterManager) {
+fn generate_children(program_string : &mut String, current_node : &mut Node, symbol_table : &Rc<STNode>, register_manager : &mut RegisterManager) {
     for mut node in &mut current_node.children {
         generate(program_string, &mut node, symbol_table, register_manager);
     }
