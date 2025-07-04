@@ -1,6 +1,9 @@
 
 use std::collections::HashMap;
+use std::rc::{Rc, Weak};
+use std::cell::{RefCell, RefMut};
 
+#[derive(Clone)]
 pub struct Symbol {
     pub primitive : String, 
     pub addr : u32,
@@ -48,6 +51,71 @@ TODO: Will need to fix scoping issues by implementing a doubly linked
 spaghetti stack (Parent Pointer Tree). For now all scoping will be shared
 globally.
  */
+
+pub struct STNode {
+    table : RefCell<SymbolTable>,
+    parent : Option<RefCell<Weak<STNode>>>,
+    children : RefCell<Vec<Rc<STNode>>>
+}
+
+pub trait tree_methods {
+    fn push_child(&self, ordinal : u32);
+    
+    fn get_table(&self) -> RefMut<SymbolTable>;
+
+    fn scope_lookup(&self, identifier : String) -> Option<Symbol>;
+
+    fn bind(&self, identifier : &String, prim : &String, func : bool);
+}
+
+impl tree_methods for Rc<STNode> {
+    fn push_child(&self, ordinal : u32) {
+        
+        let sym_tab: SymbolTable = SymbolTable {
+            symbol_table : HashMap::new(),
+            ordinal : ordinal
+        };
+
+        let child: Rc<STNode> = Rc::new(STNode{
+            table : RefCell::new(sym_tab),
+            parent : Option::Some(RefCell::new(Weak::new())),
+            children : RefCell::new(Vec::new())
+        });
+
+        *child.parent.as_ref().unwrap().borrow_mut() = Rc::downgrade(&self);
+        self.children.borrow_mut().push(child);
+    }
+
+
+    fn get_table(&self) -> RefMut<SymbolTable> {
+        return self.table.borrow_mut();
+    }
+
+    fn scope_lookup(&self, identifier : String) -> Option<Symbol> {
+        
+        if let Option::Some(symbol) = self.table.borrow().query(&identifier) {
+            return Option::Some(symbol.clone());
+        }
+
+        let mut current_node: Rc<STNode> = self.clone();
+
+        while let Option::Some(parent_node) = &current_node.parent {
+            if let Option::Some(symbol) = parent_node.borrow().upgrade().unwrap().table.borrow().query(&identifier) {
+                return Option::Some(symbol.clone());
+            }
+            
+            current_node = parent_node.clone().borrow().upgrade().unwrap();
+        }
+
+        return Option::None;
+    }
+
+    fn bind(&self, identifier : &String, prim : &String, func : bool) {
+        self.table.borrow_mut().insert(identifier, prim, func);
+    }
+
+}
+
 pub struct STManager {
     pub stack : Vec<SymbolTable>
 }
