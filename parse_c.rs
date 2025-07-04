@@ -282,8 +282,8 @@ fn parse_start_node(current_node : &mut Node, tokens : &Vec<Token>, symbol_table
 fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     //New scope made here
 
-    // symbol_table.push_child(1);
-    // let current_table = &symbol_table.children.borrow()[0];
+    symbol_table.push_child(1);
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
 
 
     let mut primitive_node : Node = create_node(NodeType::Primitive);
@@ -302,14 +302,14 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     */
 
     if 
-    parse(&mut primitive_node, tokens, symbol_table) &&
-    parse(&mut identifier_node, tokens, symbol_table) &&
-    parse(&mut open_paren_node, tokens, symbol_table) &&
-    parse(&mut arguments_node, tokens, symbol_table) &&
-    parse(&mut close_paren_node, tokens, symbol_table) &&
-    parse(&mut open_curly_node, tokens, symbol_table) &&
-    parse(&mut body_node, tokens, symbol_table) &&
-    parse(&mut close_curly_node, tokens, symbol_table)
+    parse(&mut primitive_node, tokens, current_table) &&
+    parse(&mut identifier_node, tokens, current_table) &&
+    parse(&mut open_paren_node, tokens, current_table) &&
+    parse(&mut arguments_node, tokens, current_table) &&
+    parse(&mut close_paren_node, tokens, current_table) &&
+    parse(&mut open_curly_node, tokens, current_table) &&
+    parse(&mut body_node, tokens, current_table) &&
+    parse(&mut close_curly_node, tokens, current_table)
     {
         symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
         

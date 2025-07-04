@@ -53,7 +53,8 @@ globally.
  */
 
 pub struct STNode {
-    table : RefCell<SymbolTable>,
+    pub scope_index : RefCell<usize>,
+    pub table : RefCell<SymbolTable>,
     pub parent : Option<RefCell<Weak<STNode>>>,
     pub children : RefCell<Vec<Rc<STNode>>>
 }
@@ -67,6 +68,8 @@ pub trait tree_methods {
 
     fn bind(&self, identifier : &String, prim : &String, func : bool);
 
+    fn modify_register(&self, identifier : &String, register : i32);
+
 }
 
 pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
@@ -76,6 +79,7 @@ pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
     };
 
     return Rc::new(STNode {
+        scope_index : RefCell::new(0),
         table : RefCell::new(sym_tab),
         parent : Option::Some(RefCell::new(Weak::new())),
         children : RefCell::new(Vec::new())
@@ -118,6 +122,10 @@ impl tree_methods for Rc<STNode> {
 
     fn bind(&self, identifier : &String, prim : &String, func : bool) {
         self.table.borrow_mut().insert(identifier, prim, func);
+    }
+
+    fn modify_register(&self, identifier : &String, register : i32) {
+        self.table.borrow_mut().modify_register(identifier, register);
     }
 
 }

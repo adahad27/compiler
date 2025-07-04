@@ -42,7 +42,11 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::Func_Decl => {
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
-            generate_children(program_string, current_node, symbol_table, register_manager);
+
+            let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+            generate_children(program_string, current_node, current_symbol_table, register_manager);
+            *symbol_table.scope_index.borrow_mut() += 1;
+            
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
             
         }
@@ -54,7 +58,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
             let identifier : &mut Node = &mut current_node.children[0];
 
-            // symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
+            symbol_table.modify_register(&identifier.properties["value"], register_manager.register_index(&reg_name));
             current_node.properties.insert("register".to_string(), reg_name.clone());
 
             let offset : i32 = symbol_table.scope_lookup(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
@@ -198,7 +202,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
                 program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
                 
-                // symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
                 current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
@@ -342,7 +346,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                     program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                 }
 
-                // symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
                 current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
