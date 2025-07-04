@@ -1,7 +1,8 @@
 /* This file will contain the code necessary to parse statements or 
 bodies of statements */
 
-use crate::{parse_c::{ Node, NodeType, SymbolTable, parse, create_node, get_current_token_index}, token_c::{is_primitive, is_identifier, Token}};
+use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index}, token_c::{is_primitive, is_identifier, Token}};
+use crate::symbol_table_c::{*};
 
 pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) ->bool {
 

@@ -1,5 +1,6 @@
 /* This file will contain all necessary code to parse all types of expressions */
-use crate::{parse_c::{ Node, NodeType, SymbolTable, parse, create_node, get_current_token_index, prev_token_index}, token_c::{is_operator, is_separator, Token}};
+use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index, prev_token_index}, token_c::{is_operator, is_separator, Token}};
+use crate::symbol_table_c::{*};
 
 pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &mut SymbolTable) -> bool {
 

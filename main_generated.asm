@@ -1,5 +1,5 @@
-global foo
 global main
+global foo
 foo:
 	push rbp
 	mov rbp, rsp

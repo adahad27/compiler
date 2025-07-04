@@ -6,7 +6,8 @@ logic
 
 use std::{fs};
 
-use crate::{parse_c::{ Node, NodeType, SymbolTable}, token_c::is_identifier};
+use crate::{parse_c::{ Node, NodeType}, token_c::is_identifier};
+use crate::symbol_table_c::{*};
 
 static mut CURRENT_LABEL_INDEX : u32 = 0;
 
