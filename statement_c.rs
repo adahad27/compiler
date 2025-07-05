@@ -310,6 +310,10 @@ pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 
 pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     //New scope made here
+    
+    symbol_table.push_child(symbol_table.get_ordinal());
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
+
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
     let mut cond_node : Node = create_node(NodeType::Condition_Expr);
@@ -319,13 +323,13 @@ pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
     let mut close_curly_node : Node = create_node(NodeType::Separator);
 
     if 
-    parse(&mut keyword_node, tokens, symbol_table) &&
-    parse(&mut open_paren_node, tokens, symbol_table) &&
-    parse(&mut cond_node, tokens, symbol_table) &&
-    parse(&mut close_paren_node, tokens, symbol_table) &&
-    parse(&mut open_curly_node, tokens, symbol_table) &&
-    parse(&mut body_node, tokens, symbol_table) &&
-    parse(&mut close_curly_node, tokens, symbol_table) {
+    parse(&mut keyword_node, tokens, current_table) &&
+    parse(&mut open_paren_node, tokens, current_table) &&
+    parse(&mut cond_node, tokens, current_table) &&
+    parse(&mut close_paren_node, tokens, current_table) &&
+    parse(&mut open_curly_node, tokens, current_table) &&
+    parse(&mut body_node, tokens, current_table) &&
+    parse(&mut close_curly_node, tokens, current_table) {
 
         current_node.children.push(keyword_node);
         current_node.children.push(open_paren_node);
@@ -352,6 +356,9 @@ pub fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
     init_expr and next_expr can both be empty.
     If expr is left empty, it is assumed to be true.
      */
+    symbol_table.push_child(symbol_table.get_ordinal());
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
+
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
     let mut optional_1_node : Node = create_node(NodeType::Optional_Expr);
@@ -366,17 +373,17 @@ pub fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
 
 
     if 
-    parse(&mut keyword_node, tokens, symbol_table) &&
-    parse(&mut open_paren_node, tokens, symbol_table) &&
-    parse(&mut optional_1_node, tokens, symbol_table) &&
-    parse(&mut semicolon_1_node, tokens, symbol_table) &&
-    parse(&mut optional_2_node, tokens, symbol_table) &&
-    parse(&mut semicolon_2_node, tokens, symbol_table) &&
-    parse(&mut optional_3_node, tokens, symbol_table) &&
-    parse(&mut close_paren_node, tokens, symbol_table) &&
-    parse(&mut open_curly_node, tokens, symbol_table) &&
-    parse(&mut body_node, tokens, symbol_table) &&
-    parse(&mut close_curly_node, tokens, symbol_table) {
+    parse(&mut keyword_node, tokens, current_table) &&
+    parse(&mut open_paren_node, tokens, current_table) &&
+    parse(&mut optional_1_node, tokens, current_table) &&
+    parse(&mut semicolon_1_node, tokens, current_table) &&
+    parse(&mut optional_2_node, tokens, current_table) &&
+    parse(&mut semicolon_2_node, tokens, current_table) &&
+    parse(&mut optional_3_node, tokens, current_table) &&
+    parse(&mut close_paren_node, tokens, current_table) &&
+    parse(&mut open_curly_node, tokens, current_table) &&
+    parse(&mut body_node, tokens, current_table) &&
+    parse(&mut close_curly_node, tokens, current_table) {
         
         current_node.children.push(keyword_node);
         current_node.children.push(open_paren_node);

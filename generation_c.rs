@@ -43,8 +43,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
 
-            let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+            //This line is responsible for using the correct child node for the code segment to have it's own scope
+            let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
             generate_children(program_string, current_node, current_symbol_table, register_manager);
+            //This line updates which children nodes have been used for code generation
             *symbol_table.scope_index.borrow_mut() += 1;
             
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
@@ -410,7 +412,9 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::If_Stmt => {
 
             let cond_expr : &mut Node = &mut current_node.children[2];
-            let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+
+            //This line is responsible for using the correct child node for the code segment to have it's own scope
+            let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
             generate(program_string, cond_expr, current_symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
@@ -430,6 +434,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             //Generate code for body and extra statement to allow jumping to end
             let body : &mut Node = &mut current_node.children[5];
             generate(program_string, body, current_symbol_table, register_manager);
+            //This line updates which children nodes have been used for code generation
             *symbol_table.scope_index.borrow_mut() += 1;
 
             program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
@@ -449,14 +454,17 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 //Then just pass through the generation to the else_stmt node
                 let else_stmt : &mut Node = &mut current_node.children[0];
                 else_stmt.properties.insert("end_label".to_string(), current_node.properties["end_label"].clone());
-                let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+
+                //This line is responsible for using the correct child node for the code segment to have it's own scope
+                let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
                 generate(program_string, else_stmt, current_symbol_table, register_manager);
                 *symbol_table.scope_index.borrow_mut() += 1;
             }
             else if current_node.children.len() > 1{
                 let cond_expr : &mut Node = &mut current_node.children[2];
 
-                let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+                //This line is responsible for using the correct child node for the code segment to have it's own scope
+                let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
                 generate(program_string, cond_expr, current_symbol_table, register_manager);
                 let cond_reg : String = cond_expr.properties["register"].clone();
 
@@ -476,6 +484,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 //Generate code for body and extra statement to allow jumping to end
                 let body : &mut Node = &mut current_node.children[5];
                 generate(program_string, body, current_symbol_table, register_manager);
+                //This line updates which children nodes have been used for code generation
                 *symbol_table.scope_index.borrow_mut() += 1;
 
                 program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
@@ -496,14 +505,20 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("{}:\n", start_label).as_str());
 
             let cond_expr : &mut Node = &mut current_node.children[2];
-            generate(program_string, cond_expr, symbol_table, register_manager);
+
+            
+            //This line is responsible for using the correct child node for the code segment to have it's own scope
+            let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+            generate(program_string, cond_expr, current_symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
             program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
             program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
             let body_node : &mut Node = &mut current_node.children[5];
-            generate(program_string, body_node, symbol_table, register_manager);
+            generate(program_string, body_node, current_symbol_table, register_manager);
+            //This line updates which children nodes have been used for code generation
+            *symbol_table.scope_index.borrow_mut() += 1;
 
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
@@ -513,7 +528,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
 
             let optional_expr_1 : &mut Node = &mut current_node.children[2];
-            generate(program_string, optional_expr_1, symbol_table, register_manager);
+
+            //This line is responsible for using the correct child node for the code segment to have it's own scope
+            let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+            generate(program_string, optional_expr_1, current_symbol_table, register_manager);
 
             let start_label : String = label_name(label_create());
             let done_label : String = label_name(label_create());
@@ -521,17 +539,19 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("{}:\n", start_label).as_str());
 
             let optional_expr_2 : &mut Node = &mut current_node.children[4];
-            generate(program_string, optional_expr_2, symbol_table, register_manager);
+            generate(program_string, optional_expr_2, current_symbol_table, register_manager);
             let cond_reg : String = optional_expr_2.children[0].properties["register"].clone();
 
             program_string.push_str(format!("\tcmp {}, 0\n", cond_reg).as_str());
             program_string.push_str(format!("\tje {}\n", done_label).as_str());
 
             let body_node : &mut Node = &mut current_node.children[9];
-            generate(program_string, body_node, symbol_table, register_manager);
+            generate(program_string, body_node, current_symbol_table, register_manager);
 
             let optional_expr_3 : &mut Node = &mut current_node.children[6];
-            generate(program_string, optional_expr_3, symbol_table, register_manager);
+            generate(program_string, optional_expr_3, current_symbol_table, register_manager);
+            //This line updates which children nodes have been used for code generation
+            *symbol_table.scope_index.borrow_mut() += 1;
 
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());

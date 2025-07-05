@@ -10,7 +10,7 @@ int main() {
     for(int j = 0; j < 5; j = j + 1) {
         x = x + j;
     }
-
+    x = x + i;
 
     return x;
 }
