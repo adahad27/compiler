@@ -22,7 +22,7 @@ fn main() {
     let path : String = "src_files/feature_testing/".to_string();
     let file : String = "test_bool.c".to_string();
 
-    let token_list : Vec<Token> = lex("src_files/feature_testing/test_functions.c");
+    let token_list : Vec<Token> = lex("src_files/feature_testing/test_if.c");
 
     // print_tokens(&token_list);
 

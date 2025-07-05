@@ -162,35 +162,13 @@ pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table :
 
 
 pub fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    //New scope made here
-    let mut keyword_node : Node = create_node(NodeType::Keyword);
-    let mut open_paren_node : Node = create_node(NodeType::Separator);
-    let mut cond_node : Node = create_node(NodeType::Condition_Expr);
-    let mut close_paren_node : Node = create_node(NodeType::Separator);
-    let mut open_curly_node : Node = create_node(NodeType::Separator);
-    let mut body_node : Node = create_node(NodeType::Body);
-    let mut close_curly_node : Node = create_node(NodeType::Separator);
     let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
 
     if 
-    parse(&mut keyword_node, tokens, symbol_table) &&
-    parse(&mut open_paren_node, tokens, symbol_table) &&
-    parse(&mut cond_node, tokens, symbol_table) &&
-    parse(&mut close_paren_node, tokens, symbol_table) &&
-    parse(&mut open_curly_node, tokens, symbol_table) &&
-    parse(&mut body_node, tokens, symbol_table) &&
-    parse(&mut close_curly_node, tokens, symbol_table) &&
+    handle_if_block(current_node, tokens, symbol_table) &&
     parse(&mut elif_stmt_node, tokens, symbol_table) {
-        
-        current_node.children.push(keyword_node);
-        current_node.children.push(open_paren_node);
-        current_node.children.push(cond_node);
-        current_node.children.push(close_paren_node);
-        current_node.children.push(open_curly_node);
-        current_node.children.push(body_node);
-        current_node.children.push(close_curly_node);
-        current_node.children.push(elif_stmt_node);
 
+        current_node.children.push(elif_stmt_node);
         return true;
 
     }
@@ -198,42 +176,42 @@ pub fn parse_if_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tabl
     return false;
 }
 
+fn handle_if_block(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    symbol_table.push_child(symbol_table.get_ordinal());
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut cond_node : Node = create_node(NodeType::Condition_Expr);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+    let mut open_curly_node : Node = create_node(NodeType::Separator);
+    let mut body_node : Node = create_node(NodeType::Body);
+    let mut close_curly_node : Node = create_node(NodeType::Separator);
+    if 
+    parse(&mut keyword_node, tokens, current_table) &&
+    parse(&mut open_paren_node, tokens, current_table) &&
+    parse(&mut cond_node, tokens, current_table) &&
+    parse(&mut close_paren_node, tokens, current_table) &&
+    parse(&mut open_curly_node, tokens, current_table) &&
+    parse(&mut body_node, tokens, current_table) &&
+    parse(&mut close_curly_node, tokens, current_table) {
+
+        current_node.children.push(keyword_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(cond_node);
+        current_node.children.push(close_paren_node);
+        current_node.children.push(open_curly_node);
+        current_node.children.push(body_node);
+        current_node.children.push(close_curly_node);
+
+        return true;
+    }
+
+    return false;
+}
+
 pub fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     //New scope made here
-    if tokens[get_current_token_index()].val == "elif".to_string() {
-        let mut keyword_node : Node = create_node(NodeType::Keyword);
-        let mut open_paren_node : Node = create_node(NodeType::Separator);
-        let mut cond_node : Node = create_node(NodeType::Condition_Expr);
-        let mut close_paren_node : Node = create_node(NodeType::Separator);
-        let mut open_curly_node : Node = create_node(NodeType::Separator);
-        let mut body_node : Node = create_node(NodeType::Body);
-        let mut close_curly_node : Node = create_node(NodeType::Separator);
-        let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
-        
-        if 
-        parse(&mut keyword_node, tokens, symbol_table) &&
-        parse(&mut open_paren_node, tokens, symbol_table) &&
-        parse(&mut cond_node, tokens, symbol_table) &&
-        parse(&mut close_paren_node, tokens, symbol_table) &&
-        parse(&mut open_curly_node, tokens, symbol_table) &&
-        parse(&mut body_node, tokens, symbol_table) &&
-        parse(&mut close_curly_node, tokens, symbol_table) &&
-        parse(&mut elif_stmt_node, tokens, symbol_table) {
-
-            current_node.children.push(keyword_node);
-            current_node.children.push(open_paren_node);
-            current_node.children.push(cond_node);
-            current_node.children.push(close_paren_node);
-            current_node.children.push(open_curly_node);
-            current_node.children.push(body_node);
-            current_node.children.push(close_curly_node);
-            current_node.children.push(elif_stmt_node);
-
-            return true;
-        }
-        return false;
-    }
-    else if tokens[get_current_token_index()].val == "else".to_string() {
+    if tokens[get_current_token_index()].val == "else".to_string() {
         let mut else_stmt_node : Node = create_node(NodeType::Else_Stmt);
 
         if parse(&mut else_stmt_node, tokens, symbol_table) {
@@ -243,11 +221,66 @@ pub fn parse_elif_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         return false;
     }
 
+    
+
+
+    if tokens[get_current_token_index()].val == "elif".to_string() {
+        
+        let mut elif_stmt_node : Node = create_node(NodeType::Elif_Stmt);
+        
+        if 
+        handle_elif_block(current_node, tokens, symbol_table) &&
+        parse(&mut elif_stmt_node, tokens, symbol_table) {
+
+            
+            current_node.children.push(elif_stmt_node);
+
+            return true;
+        }
+        return false;
+    }
+    
+
     return true;
+}
+
+fn handle_elif_block(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    let mut keyword_node : Node = create_node(NodeType::Keyword);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut cond_node : Node = create_node(NodeType::Condition_Expr);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+    let mut open_curly_node : Node = create_node(NodeType::Separator);
+    let mut body_node : Node = create_node(NodeType::Body);
+    let mut close_curly_node : Node = create_node(NodeType::Separator);
+
+    symbol_table.push_child(symbol_table.get_ordinal());
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
+
+    if
+    parse(&mut keyword_node, tokens, current_table) &&
+    parse(&mut open_paren_node, tokens, current_table) &&
+    parse(&mut cond_node, tokens, current_table) &&
+    parse(&mut close_paren_node, tokens, current_table) &&
+    parse(&mut open_curly_node, tokens, current_table) &&
+    parse(&mut body_node, tokens, current_table) &&
+    parse(&mut close_curly_node, tokens, current_table) {
+        current_node.children.push(keyword_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(cond_node);
+        current_node.children.push(close_paren_node);
+        current_node.children.push(open_curly_node);
+        current_node.children.push(body_node);
+        current_node.children.push(close_curly_node);
+        return true;
+    }
+    return false;
 }
 
 pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     //New scope made here
+    symbol_table.push_child(symbol_table.get_ordinal());
+    let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
+
     if tokens[get_current_token_index()].val == "else".to_string() {
         let mut keyword_node : Node = create_node(NodeType::Keyword);
         let mut open_curly_node : Node = create_node(NodeType::Separator);
@@ -255,10 +288,10 @@ pub fn parse_else_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         let mut close_curly_node : Node = create_node(NodeType::Separator);
 
         if 
-        parse(&mut keyword_node, tokens, symbol_table) &&
-        parse(&mut open_curly_node, tokens, symbol_table) &&
-        parse(&mut body_node, tokens, symbol_table) &&
-        parse(&mut close_curly_node, tokens, symbol_table) {
+        parse(&mut keyword_node, tokens, current_table) &&
+        parse(&mut open_curly_node, tokens, current_table) &&
+        parse(&mut body_node, tokens, current_table) &&
+        parse(&mut close_curly_node, tokens, current_table) {
 
 
             current_node.children.push(keyword_node);

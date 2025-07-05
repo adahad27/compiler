@@ -70,6 +70,9 @@ pub trait tree_methods {
 
     fn modify_register(&self, identifier : &String, register : i32);
 
+    fn get_ordinal(&self) -> u32;
+
+    fn in_table(&self, identifier : &String) -> bool;
 }
 
 pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
@@ -125,7 +128,31 @@ impl tree_methods for Rc<STNode> {
     }
 
     fn modify_register(&self, identifier : &String, register : i32) {
-        self.table.borrow_mut().modify_register(identifier, register);
+        if self.in_table(identifier) {
+            self.table.borrow_mut().modify_register(identifier, register);
+            return;
+        }
+
+        let mut current_node: Rc<STNode> = self.clone();
+
+        while let Option::Some(parent_node) = &current_node.parent {
+            if parent_node.borrow().upgrade().unwrap().in_table(identifier) {
+                parent_node.borrow().upgrade().unwrap().table.borrow_mut().modify_register(identifier, register);
+                return;
+            }
+            
+            current_node = parent_node.clone().borrow().upgrade().unwrap();
+        }
     }
 
+    fn in_table(&self, identifier : &String) -> bool {
+        if let Option::Some(symbol) = self.table.borrow().query(identifier) {
+            return true;
+        }
+        return false;
+    }
+
+    fn get_ordinal(&self) -> u32 {
+        return self.table.borrow().ordinal;
+    }
 }

@@ -410,7 +410,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::If_Stmt => {
 
             let cond_expr : &mut Node = &mut current_node.children[2];
-            generate(program_string, cond_expr, symbol_table, register_manager);
+            let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+            generate(program_string, cond_expr, current_symbol_table, register_manager);
             let cond_reg : String = cond_expr.properties["register"].clone();
 
             let end_label : String = label_name(label_create());
@@ -428,7 +429,9 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
             //Generate code for body and extra statement to allow jumping to end
             let body : &mut Node = &mut current_node.children[5];
-            generate(program_string, body, symbol_table, register_manager);
+            generate(program_string, body, current_symbol_table, register_manager);
+            *symbol_table.scope_index.borrow_mut() += 1;
+
             program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
             program_string.push_str(format!("{}:\n", next_label).as_str());
             
@@ -446,11 +449,15 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 //Then just pass through the generation to the else_stmt node
                 let else_stmt : &mut Node = &mut current_node.children[0];
                 else_stmt.properties.insert("end_label".to_string(), current_node.properties["end_label"].clone());
-                generate(program_string, else_stmt, symbol_table, register_manager);
+                let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+                generate(program_string, else_stmt, current_symbol_table, register_manager);
+                *symbol_table.scope_index.borrow_mut() += 1;
             }
             else if current_node.children.len() > 1{
                 let cond_expr : &mut Node = &mut current_node.children[2];
-                generate(program_string, cond_expr, symbol_table, register_manager);
+
+                let current_symbol_table = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
+                generate(program_string, cond_expr, current_symbol_table, register_manager);
                 let cond_reg : String = cond_expr.properties["register"].clone();
 
                 let end_label : String = current_node.properties["end_label"].clone();
@@ -468,7 +475,9 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 
                 //Generate code for body and extra statement to allow jumping to end
                 let body : &mut Node = &mut current_node.children[5];
-                generate(program_string, body, symbol_table, register_manager);
+                generate(program_string, body, current_symbol_table, register_manager);
+                *symbol_table.scope_index.borrow_mut() += 1;
+
                 program_string.push_str(format!("\tjmp {}\n", end_label).as_str());
                 program_string.push_str(format!("{}:\n", next_label).as_str());
                 
