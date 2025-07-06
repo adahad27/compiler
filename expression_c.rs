@@ -501,3 +501,29 @@ pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_
     }
     return false;
 }
+
+pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut open_paren_node : Node = create_node(NodeType::Separator);
+    let mut arguments_node : Node = create_node(NodeType::Arguments);
+    let mut close_paren_node : Node = create_node(NodeType::Separator);
+
+    if
+    parse(&mut identifier_node, tokens, symbol_table) &&
+    parse(&mut open_paren_node, tokens, symbol_table) &&
+    parse(&mut arguments_node, tokens, symbol_table) &&
+    parse(&mut close_paren_node, tokens, symbol_table) {
+        
+        current_node.children.push(identifier_node);
+        current_node.children.push(open_paren_node);
+        current_node.children.push(arguments_node);
+        current_node.children.push(close_paren_node);
+
+        current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
+
+    }
+
+
+    return false;
+}

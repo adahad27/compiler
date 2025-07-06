@@ -30,16 +30,15 @@ x   func_decl -> primitive identifier (arguments);
     var_decl -> primitive assign_expr
 
     statement -> assign_expr ;
-
-x   expression -> identifier = expression
+    statement -> func_call ;
     
-    a = identifier | constant
+    func_call -> identifier (arguments)
 
     arith_expr -> arith_term subexpr
     subexpr -> [+ arith_term subexpr] | [- arith_term subexpr] | arith_term | empty
     arith_term -> arith_factor arith_subterm
     arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
-    arith_factor -> a | (arith_expr)
+    arith_factor -> a | (arith_expr) | func_call
 
     bool_expr -> bool_term bool_subexpr
     bool_subexpr -> [|| bool_term bool_subexpr] | empty
@@ -47,7 +46,7 @@ x   expression -> identifier = expression
     bool_subterm -> [&& bool_factor bool_subterm] | empty
     bool_factor -> bool_operand bool_subfactor
     bool_subfactor -> [== | !=] bool_operand bool_subfactor | empty
-    bool_operand -> [! bool_expr] | id | keyword
+    bool_operand -> [! bool_expr] | id | keyword | func_call
 
     relational_expr -> arith_expr [< | <= | > | >=] arith_expr
 
@@ -128,6 +127,7 @@ pub enum NodeType {
     Program_Start,
     Func_Decl,
     Other_Decl,
+    Func_Call,
     Arguments,
     Primitive,
     Identifier,
@@ -187,6 +187,8 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<
         NodeType::Program_Start => parse_start_node(current_node, tokens, symbol_table),
         
         NodeType::Other_Decl => parse_other_decl(current_node, tokens, symbol_table),
+
+        NodeType::Func_Call => parse_func_call(current_node, tokens, symbol_table),
 
         NodeType::Func_Decl => parse_func_decl(current_node, tokens, symbol_table),
 
