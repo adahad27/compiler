@@ -1,5 +1,5 @@
 /* This file will contain all necessary code to parse all types of expressions */
-use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index, prev_token_index}, token_c::{is_operator, is_separator, Token}};
+use crate::{parse_c::{ create_node, get_current_token_index, parse, prev_token_index, Node, NodeType}, token_c::{is_identifier, is_operator, is_separator, Token}};
 use crate::symbol_table_c::{*};
 use std::rc::Rc;
 
@@ -150,15 +150,33 @@ pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol
      */
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut constant_node : Node = create_node(NodeType::Constant);
-    let identifier_parse : bool = parse(&mut identifier_node, tokens, symbol_table);
-    let constant_parse : bool = parse(&mut constant_node, tokens, symbol_table);
-    if identifier_parse != constant_parse {
-        current_node.children.push(if identifier_parse {identifier_node} else {constant_node});
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["value"].clone());
+    let mut func_call_node : Node = create_node(NodeType::Func_Call);
 
+    if parse(&mut constant_node, tokens, symbol_table) {
         return true;
     }
+    else if is_identifier(&tokens[get_current_token_index()].val) {
+        if 
+        parse(&mut func_call_node, tokens, symbol_table) &&
+        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() {
+            current_node.properties.insert("terminal".to_string(), func_call_node.properties["identifier"].clone());
+            current_node.children.push(func_call_node);
+            return true;
 
+        }
+        prev_token_index();//Reset the token stream because it must have failed after parsing the identifier
+
+        if 
+        parse(&mut identifier_node, tokens, symbol_table) &&
+        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+            current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
+            current_node.children.push(identifier_node);
+            return true;
+        }
+        return false;
+
+        
+    }
     return false;
 }
 
@@ -338,6 +356,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     // let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
+    let mut func_call_node : Node = create_node(NodeType::Func_Call);
 
     if 
     "!" == tokens[get_current_token_index()].val &&
@@ -369,14 +388,26 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
         current_node.properties.insert("terminal".to_string(), terminal);
         return true;
     }
-    else if 
-    parse(&mut identifier_node, tokens, symbol_table) {
-        if symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+
+    else if
+    is_identifier(&tokens[get_current_token_index()].val) {
+        if 
+        parse(&mut func_call_node, tokens, symbol_table) &&
+        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() {
+            current_node.properties.insert("terminal".to_string(), func_call_node.properties["identifier"].clone());
+            current_node.children.push(func_call_node);
+            return true;
+
+        }
+        prev_token_index();//Reset the token stream because it must have failed after parsing the identifier
+
+        if 
+        parse(&mut identifier_node, tokens, symbol_table) &&
+        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
             current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
             current_node.children.push(identifier_node);
             return true;
         }
-        prev_token_index();
         return false;
     }
     return false;

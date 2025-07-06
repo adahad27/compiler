@@ -1,7 +1,7 @@
 /* This file will contain the code necessary to parse statements or 
 bodies of statements */
 use std::rc::Rc;
-use crate::{parse_c::{ Node, NodeType, parse, create_node, get_current_token_index}, token_c::{is_primitive, is_identifier, Token}};
+use crate::{parse_c::{ create_node, get_current_token_index, next_token_index, parse, Node, NodeType}, token_c::{is_identifier, is_primitive, Token}};
 use crate::symbol_table_c::{*};
 
 pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
@@ -33,17 +33,32 @@ pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     }
     else if 
     is_identifier(&tokens[get_current_token_index()].val) {
-        //Then we have found a variable declaration
+        /* 
+        Then we have either found an assignment expression OR we have found a 
+        function call.
+        */
         let mut assign_expr : Node = create_node(NodeType::Assign_Expr);
+        let mut func_call_node : Node = create_node(NodeType::Func_Call);
         let mut semicolon_node : Node = create_node(NodeType::Separator);
 
-        if 
-        parse(&mut assign_expr, tokens, symbol_table) &&
+        if
+        tokens[next_token_index()].val == "(" &&
+        parse(&mut func_call_node, tokens, symbol_table) &&
         parse(&mut semicolon_node, tokens, symbol_table) {
+            //Then this must be a function call
+            current_node.children.push(func_call_node);
+            current_node.children.push(semicolon_node);
+            return true;
+        }
+        else if parse(&mut assign_expr, tokens, symbol_table) &&
+        parse(&mut semicolon_node, tokens, symbol_table){
+            //Otherwise this must be an assignment
             current_node.children.push(assign_expr);
             current_node.children.push(semicolon_node);
             return true;
         }
+
+        return false;
         
     }
     else if tokens[get_current_token_index()].val == "if".to_string() {
