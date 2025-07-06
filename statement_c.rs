@@ -1,7 +1,7 @@
 /* This file will contain the code necessary to parse statements or 
 bodies of statements */
 use std::rc::Rc;
-use crate::{parse_c::{ create_node, get_current_token_index, next_token_index, parse, Node, NodeType}, token_c::{is_identifier, is_primitive, Token}};
+use crate::{parse_c::{ create_node, get_current_token_index,  parse, Node, NodeType}, token_c::{is_identifier, is_primitive, Token}};
 use crate::symbol_table_c::{*};
 
 pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
@@ -126,8 +126,6 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
             
             return false;
         }
-        
-        return false;
 
     }
     return false;

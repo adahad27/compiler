@@ -2,6 +2,11 @@ global main
 main:
 	push rbp
 	mov rbp, rsp
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
 	push 0
 	mov qword rbx, 0
 	mov qword [rbp-8], rbx
@@ -61,6 +66,11 @@ main:
 	mov qword [rbp-8], r13
 	mov r13, [rbp-8]
 	mov rax, r13
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
 	mov rsp, rbp
 	pop rbp
 	ret

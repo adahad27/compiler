@@ -43,12 +43,29 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
 
+            //Saving all Callee saved registers upon entering a function.
+            program_string.push_str("\tpush rbx\n");
+            let mut index : u32 = 12;
+            while index < 16 {
+                program_string.push_str(format!("\tpush r{}\n", index).as_str());
+                index += 1;
+            }
+
             //This line is responsible for using the correct child node for the code segment to have it's own scope
             let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
             generate_children(program_string, current_node, current_symbol_table, register_manager);
             //This line updates which children nodes have been used for code generation
             *symbol_table.scope_index.borrow_mut() += 1;
             
+
+            //Restoring all Calle saved registers upon exiting a function.
+            index -= 1;
+            while index > 11 {
+                program_string.push_str(format!("\tpop r{}\n", index).as_str());
+                index -= 1;
+            }
+            program_string.push_str("\tpop rbx\n");
+
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
             
         }

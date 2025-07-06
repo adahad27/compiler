@@ -59,7 +59,7 @@ pub struct STNode {
     pub children : RefCell<Vec<Rc<STNode>>>
 }
 
-pub trait tree_methods {
+pub trait TreeMethods {
     fn push_child(&self, ordinal : u32);
     
     fn get_table(&self) -> RefMut<SymbolTable>;
@@ -89,7 +89,7 @@ pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
     })
 }
 
-impl tree_methods for Rc<STNode> {
+impl TreeMethods for Rc<STNode> {
 
     fn push_child(&self, ordinal : u32) {
         
@@ -146,7 +146,7 @@ impl tree_methods for Rc<STNode> {
     }
 
     fn in_table(&self, identifier : &String) -> bool {
-        if let Option::Some(symbol) = self.table.borrow().query(identifier) {
+        if let Option::Some(_symbol) = self.table.borrow().query(identifier) {
             return true;
         }
         return false;
