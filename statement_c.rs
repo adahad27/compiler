@@ -42,7 +42,7 @@ pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         let mut semicolon_node : Node = create_node(NodeType::Separator);
 
         if
-        tokens[next_token_index()].val == "(" &&
+        tokens[get_current_token_index() + 1].val == "(" &&
         parse(&mut func_call_node, tokens, symbol_table) &&
         parse(&mut semicolon_node, tokens, symbol_table) {
             //Then this must be a function call
@@ -135,18 +135,18 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
 
 pub fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
     let mut return_node : Node = create_node(NodeType::Keyword);
-    let mut arith_expr_node : Node = create_node(NodeType::Arith_Expr);
+    let mut expr_node : Node = create_node(NodeType::Arith_Expr);
     let mut semicolon_node : Node = create_node(NodeType::Separator);
 
 
 
     if
     parse(&mut return_node, tokens, symbol_table) &&
-    parse(&mut arith_expr_node, tokens, symbol_table) &&
+    parse(&mut expr_node, tokens, symbol_table) &&
     parse(&mut semicolon_node, tokens, symbol_table) {
         
         current_node.children.push(return_node);
-        current_node.children.push(arith_expr_node);
+        current_node.children.push(expr_node);
         current_node.children.push(semicolon_node);
 
         return true;

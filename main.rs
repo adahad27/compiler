@@ -6,12 +6,10 @@ mod expression_c;
 mod statement_c;
 mod symbol_table_c;
 
-use std::collections::HashMap;
 use crate::token_c::{lex_file, Token};
 use crate::generation_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};
 use crate::symbol_table_c::{*};
-use std::rc::Rc;
 
 
 fn main() {
@@ -19,8 +17,6 @@ fn main() {
 
     let symbol_table = create_new_STNode(1);
     
-    let path : String = "src_files/feature_testing/".to_string();
-    let file : String = "test_bool.c".to_string();
 
     let token_list : Vec<Token> = lex("src_files/feature_testing/test_loops.c");
 

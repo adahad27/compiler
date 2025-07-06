@@ -153,26 +153,29 @@ pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol
     let mut func_call_node : Node = create_node(NodeType::Func_Call);
 
     if parse(&mut constant_node, tokens, symbol_table) {
+        current_node.properties.insert("terminal".to_string(), constant_node.properties["value"].clone());
+        current_node.children.push(constant_node);
         return true;
     }
     else if is_identifier(&tokens[get_current_token_index()].val) {
-        if 
+        if
+        tokens[get_current_token_index() + 1].val == "(" && 
         parse(&mut func_call_node, tokens, symbol_table) &&
-        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() {
+        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "int".to_string() {
             current_node.properties.insert("terminal".to_string(), func_call_node.properties["identifier"].clone());
             current_node.children.push(func_call_node);
             return true;
 
         }
-        prev_token_index();//Reset the token stream because it must have failed after parsing the identifier
-
-        if 
+        else if 
         parse(&mut identifier_node, tokens, symbol_table) &&
-        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+        (symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "int".to_string() ||
+        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string()) {
             current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
             current_node.children.push(identifier_node);
             return true;
         }
+        prev_token_index();
         return false;
 
         
@@ -391,7 +394,8 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
 
     else if
     is_identifier(&tokens[get_current_token_index()].val) {
-        if 
+        if
+        tokens[get_current_token_index() + 1].val == "(" && 
         parse(&mut func_call_node, tokens, symbol_table) &&
         symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() {
             current_node.properties.insert("terminal".to_string(), func_call_node.properties["identifier"].clone());
@@ -399,15 +403,14 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
             return true;
 
         }
-        prev_token_index();//Reset the token stream because it must have failed after parsing the identifier
-
-        if 
+        else if 
         parse(&mut identifier_node, tokens, symbol_table) &&
         symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
             current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
             current_node.children.push(identifier_node);
             return true;
         }
+        prev_token_index();
         return false;
     }
     return false;
