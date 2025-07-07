@@ -75,7 +75,7 @@ pub trait TreeMethods {
     fn in_table(&self, identifier : &String) -> bool;
 }
 
-pub fn create_new_STNode(ordinal : u32) -> Rc<STNode> {
+pub fn create_new_stnode(ordinal : u32) -> Rc<STNode> {
     let sym_tab: SymbolTable = SymbolTable {
         symbol_table : HashMap::new(),
         ordinal : ordinal
@@ -93,7 +93,7 @@ impl TreeMethods for Rc<STNode> {
 
     fn push_child(&self, ordinal : u32) {
         
-        let child: Rc<STNode> = create_new_STNode(ordinal);
+        let child: Rc<STNode> = create_new_stnode(ordinal);
 
         *child.parent.as_ref().unwrap().borrow_mut() = Rc::downgrade(&self);
         self.children.borrow_mut().push(child);

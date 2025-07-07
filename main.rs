@@ -20,19 +20,16 @@ fn main() {
         return;
     }
 
-    let symbol_table = create_new_STNode(1);
+    let symbol_table = create_new_stnode(1);
     
 
     let token_list : Vec<Token> = lex(args[1].as_str());
-
-    // print_tokens(&token_list);
 
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
     if parse(&mut current_node, &token_list, &symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        // let filename : String = "src_files/feature_testing/test_loops.asm".to_string();
         generate_code(&filename, &mut current_node, &symbol_table);
     }
     else {

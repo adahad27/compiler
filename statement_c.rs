@@ -27,6 +27,7 @@ pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         parse(&mut semicolon_node, tokens, symbol_table)
         {
             current_node.children.push(var_decl);
+            current_node.properties.insert("var_alloc".to_string(), "1".to_string());
             return true;
         }
         
@@ -92,15 +93,11 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
     let mut primitive_node : Node = create_node(NodeType::Primitive);
     let mut identity_node : Node = create_node(NodeType::Identifier);
     
-    //Defaults to arith_expr
-    // let mut expr_node : Node = create_node(NodeType::Arith_Expr);
-    // let mut expr_node : Node = create_node(NodeType::Bool_Expr);
     
 
     if parse(&mut primitive_node, tokens, symbol_table) {
         
         let mut expr_node : Node = create_node(NodeType::Assign_Expr);
-        // let mut semicolon_node : Node = create_node(NodeType::Separator);
         current_node.children.push(primitive_node);
 
         if is_identifier(&tokens[get_current_token_index()].val) {
@@ -157,18 +154,21 @@ pub fn parse_ret_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
 }
 
 pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
+    let mut var_alloc : u32 = 0;
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
-        if parse(&mut stmt_node, tokens, symbol_table)                 
-        {
+        if parse(&mut stmt_node, tokens, symbol_table) {
+            if stmt_node.properties.contains_key("var_alloc") {
+                var_alloc += 1;
+            }
             current_node.children.push(stmt_node);
         }
-        else 
-        {
+        else {
             return false;
         }
 
     }
+    current_node.properties.insert("var_alloc".to_string(), var_alloc.to_string());
     return true;
 }
 

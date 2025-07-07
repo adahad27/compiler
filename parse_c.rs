@@ -82,16 +82,16 @@ use crate::symbol_table_c::{*};
 static mut CURRENT_TOKEN_INDEX : u32 = 0;
 
 //This function returns the size of a primitive based on the declared type
-fn get_primitive_size(prim : &String) -> u32 {
-    let primitive : &str = prim.as_str();
-    match primitive {
-        //For now we make them all take up a register's worth of space
-        "int" => 8,
-        "char" => 8,
-        "bool" => 8,
-        _ => 0
-    }
-}
+// fn get_primitive_size(prim : &String) -> u32 {
+//     let primitive : &str = prim.as_str();
+//     match primitive {
+//         //For now we make them all take up a register's worth of space
+//         "int" => 4,
+//         "char" => 1,
+//         "bool" => 1,
+//         _ => 0
+//     }
+// }
 
 
 pub fn get_current_token_index() -> usize {
@@ -165,16 +165,14 @@ pub enum NodeType {
 pub struct Node {
     pub node_type : NodeType,
     pub children : Vec<Node>,
-    pub properties : HashMap<String, String>,
-    pub register : i32 //-1 implies that there is no register assigned
+    pub properties : HashMap<String, String>
 }
 
 pub fn create_node(n_type : NodeType) -> Node {
     return Node {
         node_type : n_type,
         children : Vec::new(),
-        properties : HashMap::new(),
-        register : -1
+        properties : HashMap::new()
     };
 } 
 
@@ -314,7 +312,8 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut close_curly_node, tokens, current_table)
     {
         symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
-        
+        current_node.properties.insert("var_alloc".to_string(), body_node.properties["var_alloc"].clone());
+
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
         current_node.children.push(open_paren_node);

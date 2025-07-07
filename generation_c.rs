@@ -21,9 +21,6 @@ pub fn generate_code(filename : &String, current_node : &mut Node, symbol_table 
 
     generate(&mut program_string, current_node, symbol_table, &mut register_manager);
 
-
-    // generate_exit_stub(&mut program_string);
-
     fs::write(filename, program_string).expect("Unable to write to file");
 
 }
@@ -42,6 +39,13 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::Func_Decl => {
             program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
+
+
+            //Save arguments to function on stack here
+
+
+            //Allocate space for all local variables here
+            program_string.push_str(format!("\tsub rsp, {}\n", current_node.properties["var_alloc"].parse::<u32>().unwrap() * 8).as_str());
 
             //Saving all Callee saved registers upon entering a function.
             program_string.push_str("\tpush rbx\n");
@@ -588,12 +592,12 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
         }
-        NodeType::VarDecl => {            
-            program_string.push_str("\tpush 0\n");
-            generate_children(program_string, current_node, symbol_table, register_manager);
+        // NodeType::VarDecl => {            
+        //     program_string.push_str("\tpush 0\n");
+        //     generate_children(program_string, current_node, symbol_table, register_manager);
             
             
-        }
+        // }
         NodeType::Return_Stmt => {
             generate_children(program_string, current_node, symbol_table, register_manager);
             if current_node.children[1].properties.contains_key("terminal") {
@@ -626,11 +630,6 @@ fn generate_children(program_string : &mut String, current_node : &mut Node, sym
     for mut node in &mut current_node.children {
         generate(program_string, &mut node, symbol_table, register_manager);
     }
-}
-
-fn generate_exit_stub(program_string : &mut String) {
-    program_string.push_str("\tmov rax, 60\n");
-    program_string.push_str("\tsyscall\n");
 }
 
 struct Register {

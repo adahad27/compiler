@@ -196,8 +196,9 @@ pub fn lex_file(input : String) -> Vec<Token> {
     return token_vector;
 }
 
-pub fn print_tokens(tokens : &Vec<Token>) {
-    for tok in tokens {
-        println!("{}", tok.val);
-    }
-}
+//This is a debugging function
+// pub fn print_tokens(tokens : &Vec<Token>) {
+//     for tok in tokens {
+//         println!("{}", tok.val);
+//     }
+// }
