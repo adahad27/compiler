@@ -69,6 +69,21 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
             
         }
+        NodeType::Func_Call => {
+            /* 
+            1.) Store first 6 args in corresponding registers
+            2.) Pass excess arguments or arguments that can't fit onto the stack.
+            3.) Save all Caller-saved registers
+            4.) callq .<FUNCTION_NAME>
+            5.) Set properties["register"] = rax
+            6.) Restore all Caller-saved registers
+            7.) Restore argument registers?
+             */
+
+            program_string.push_str(format!("\tcall {}\n", current_node.properties["identifier"]).as_str());
+            generate_children(program_string, current_node, symbol_table, register_manager);
+            current_node.properties.insert("register".to_string(), "rax".to_string());
+        }
         NodeType::Assign_Expr => {
             let arith_expr : &mut Node = &mut current_node.children[2];
             generate(program_string, arith_expr, symbol_table, register_manager);

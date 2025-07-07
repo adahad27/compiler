@@ -555,6 +555,7 @@ pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         current_node.children.push(close_paren_node);
 
         current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
+        return true;
 
     }
 

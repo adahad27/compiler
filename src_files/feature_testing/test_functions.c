@@ -9,5 +9,6 @@ int foo() {
 
 int main(){
     int x = 1;
+    foo();
     return x;
 }

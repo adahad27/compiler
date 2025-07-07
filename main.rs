@@ -10,15 +10,20 @@ use crate::token_c::{lex_file, Token};
 use crate::generation_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};
 use crate::symbol_table_c::{*};
-
+use std::env;
 
 fn main() {
 
+    let args : Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Please type in an actual file!");
+        return;
+    }
 
     let symbol_table = create_new_STNode(1);
     
 
-    let token_list : Vec<Token> = lex("src_files/feature_testing/test_loops.c");
+    let token_list : Vec<Token> = lex(args[1].as_str());
 
     // print_tokens(&token_list);
 
