@@ -92,7 +92,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             let arith_expr : &mut Node = &mut current_node.children[2];
             generate(program_string, arith_expr, symbol_table, register_manager);
             let reg_name  = arith_expr.properties["register"].clone();
-            
 
             let identifier : &mut Node = &mut current_node.children[0];
 
@@ -232,16 +231,22 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::Arith_Factor => {
             let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
-                
+                //We have different behavior according to whether or not this factor is a function
+                if symbol_table.scope_lookup(&operand).unwrap().func {
+                    generate_children(program_string, current_node, symbol_table, register_manager);
+                    current_node.properties.insert("register".to_string(), current_node.children[0].properties["register"].clone());
+                }
+                else {
+                    let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                    let reg_name : String = register_manager.register_name(reg_index);
 
-                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
-                let reg_name : String = register_manager.register_name(reg_index);
-
-                let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
-                program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
+                    let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
+                    program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
+                    
+                    symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                    current_node.properties.insert("register".to_string(), reg_name);
+                }
                 
-                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
-                current_node.properties.insert("register".to_string(), reg_name);
             }
             else {
                 let reg_index : u32 = register_manager.register_alloc(0).unwrap();
@@ -374,18 +379,30 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         NodeType::Bool_Operand => {
             let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
-                let reg_index : u32 = register_manager.register_alloc(0).unwrap();
-                let reg_name : String = register_manager.register_name(reg_index);
 
-                let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
-                program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
-                
-                if current_node.properties.contains_key("unary") {
-                    program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
+                if symbol_table.scope_lookup(&operand).unwrap().func {
+                    generate_children(program_string, current_node, symbol_table, register_manager);
+                    let reg_name : String = current_node.children[0].properties["register"].clone();
+                    if current_node.properties.contains_key("unary") {
+                        program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
+                    }
+                    current_node.properties.insert("register".to_string(), reg_name);
                 }
+                else {
+                    let reg_index : u32 = register_manager.register_alloc(0).unwrap();
+                    let reg_name : String = register_manager.register_name(reg_index);
 
-                symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
-                current_node.properties.insert("register".to_string(), reg_name);
+                    let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
+                    program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
+                    
+                    if current_node.properties.contains_key("unary") {
+                        program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
+                    }
+
+                    symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
+                    current_node.properties.insert("register".to_string(), reg_name);
+                }
+                
             }
             else {
                 //Left operand is a constant
@@ -483,7 +500,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate(program_string, elif_stmt, symbol_table, register_manager);
 
             //Generate the actual end label
-            program_string.push_str(format!("{}:\n", end_label).as_str());
+            if elif_stmt.children.len() > 0 {
+                program_string.push_str(format!("{}:\n", end_label).as_str());
+            }
+            
         }
         NodeType::Elif_Stmt => {
             if current_node.children.len() == 1 {
@@ -592,12 +612,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             program_string.push_str(format!("\tjmp {}\n", start_label).as_str());
             program_string.push_str(format!("{}:\n", done_label).as_str());
         }
-        // NodeType::VarDecl => {            
-        //     program_string.push_str("\tpush 0\n");
-        //     generate_children(program_string, current_node, symbol_table, register_manager);
-            
-            
-        // }
         NodeType::Return_Stmt => {
             generate_children(program_string, current_node, symbol_table, register_manager);
             if current_node.children[1].properties.contains_key("terminal") {
@@ -646,7 +660,19 @@ impl RegisterManager {
     fn initialize(&mut self) {
         // self.register_list = Vec::new();
         //Hardcoded register names specifically for x86 architecture
+        self.register_list.push(Register{name : "rax".to_string(), in_use : false, addr : 0});
         self.register_list.push(Register{name : "rbx".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "rcx".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "rdx".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "rsi".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "rdi".to_string(), in_use : false, addr : 0});
+
+        //Making sure that rsp, rbp cannot be overwritten by marking them in use
+        self.register_list.push(Register{name : "rbp".to_string(), in_use : true, addr : 0});
+        self.register_list.push(Register{name : "rsp".to_string(), in_use : true, addr : 0});
+
+        self.register_list.push(Register{name : "r8".to_string(), in_use : false, addr : 0});
+        self.register_list.push(Register{name : "r9".to_string(), in_use : false, addr : 0});
         self.register_list.push(Register{name : "r10".to_string(), in_use : false, addr : 0});
         self.register_list.push(Register{name : "r11".to_string(), in_use : false, addr : 0});
         self.register_list.push(Register{name : "r12".to_string(), in_use : false, addr : 0});
@@ -669,24 +695,38 @@ impl RegisterManager {
             index += 1;
         }
         //Currently throw errors if there are no available registers.
+        //TODO: Add register spilling insteada of throwing errors
         return Option::None;
     }
 
     fn register_free(&mut self, reg_index : u32) {
-        self.register_list[reg_index as usize].in_use = false;
-        self.register_list[reg_index as usize].addr = 0;
+        //Another check to make sure that rbp, rsp cannot be overwritten
+        if reg_index != 6 || reg_index != 7 {
+            self.register_list[reg_index as usize].in_use = false;
+            self.register_list[reg_index as usize].addr = 0;
+        }
+        
     }
 
     fn register_index(&self, register_name : &String) -> i32 {
         let name = register_name.as_str();
         match name {
-            "rbx" => 0,
-            "r10" => 1,
-            "r11" => 2,
-            "r12" => 3,
-            "r13" => 4,
-            "r14" => 5,
-            "r15" => 6,
+            "rax" => 0,
+            "rbx" => 1,
+            "rcx" => 2,
+            "rdx" => 3,
+            "rsi" => 4,
+            "rdi" => 5,
+            "rbp" => 6,
+            "rsp" => 7,
+            "r8" => 8,
+            "r9" => 9,
+            "r10" => 10,
+            "r11" => 11,
+            "r12" => 12,
+            "r13" => 13,
+            "r14" => 14,
+            "r15" => 15,
             _ => -1
         }
     }

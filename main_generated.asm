@@ -1,4 +1,46 @@
 global main
+global foo
+global return_false
+foo:
+	push rbp
+	mov rbp, rsp
+	sub rsp, 8
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
+	mov qword rax, 3
+	mov qword [rbp-8], rax
+	mov rax, [rbp-8]
+	mov rax, rax
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+	mov rsp, rbp
+	pop rbp
+	ret
+return_false:
+	push rbp
+	mov rbp, rsp
+	sub rsp, 0
+	push rbx
+	push r12
+	push r13
+	push r14
+	push r15
+	mov qword rax, 0
+	mov rax, 0
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+	mov rsp, rbp
+	pop rbp
+	ret
 main:
 	push rbp
 	mov rbp, rsp
@@ -8,62 +50,24 @@ main:
 	push r13
 	push r14
 	push r15
-	mov qword rbx, 0
+	mov qword rbx, 1
 	mov qword [rbp-8], rbx
-	mov qword rbx, 0
-	mov qword [rbp-16], rbx
-.L1:
-	mov rbx, [rbp-16]
-	mov qword r10, 5
-	cmp rbx, r10
-	jl .L3
-	mov rbx, 0
-	jmp .L4
-.L3:
-	mov rbx, 1
-.L4:
-	cmp rbx, 0
-	je .L2
-	mov r11, [rbp-8]
-	mov r12, [rbp-16]
-	add r11, r12
-	mov qword [rbp-8], r11
-	mov r11, [rbp-16]
-	mov qword r12, 1
-	add r11, r12
-	mov qword [rbp-16], r11
+	call foo
+	mov qword [rbp-8], rax
+	call return_false
+	mov qword [rbp-16], rax
+	mov rax, [rbp-16]
+	xor rax, 1
+	cmp rax, 0
+	je .L1
+	mov rbx, [rbp-8]
+	mov qword rcx, 1
+	add rbx, rcx
+	mov qword [rbp-8], rbx
 	jmp .L1
-.L2:
-	mov qword r11, 0
-	mov qword [rbp-24], r11
-.L5:
-	mov r11, [rbp-24]
-	mov qword r12, 5
-	cmp r11, r12
-	jl .L7
-	mov r11, 0
-	jmp .L8
-.L7:
-	mov r11, 1
-.L8:
-	cmp r11, 0
-	je .L6
-	mov r13, [rbp-8]
-	mov r14, [rbp-24]
-	add r13, r14
-	mov qword [rbp-8], r13
-	mov r13, [rbp-24]
-	mov qword r14, 1
-	add r13, r14
-	mov qword [rbp-24], r13
-	jmp .L5
-.L6:
-	mov r13, [rbp-8]
-	mov r14, [rbp-16]
-	add r13, r14
-	mov qword [rbp-8], r13
-	mov r13, [rbp-8]
-	mov rax, r13
+.L1:
+	mov rbx, [rbp-8]
+	mov rax, rbx
 	pop r15
 	pop r14
 	pop r13

@@ -10,11 +10,11 @@ Implemented features of <C:
 1. Support for int, bool
 2. Support for arithmetic, boolean, and relational operators
 3. Support for conditional and loop statements
+4.Function declarations, definitions, and calls
 
 Planned features of <C:
 1. Support for char primitive type
-2. Function declarations, definitions, and calls
-3. Arrays (Stack allocated)
+2. Arrays (Stack allocated)
 
 Compiler Specifics:
 This compiler uses an LL(1) Recursive Descent Parser to create an Abstract Syntax Tree. For now, there is no conversion to an Intermediate Representation.

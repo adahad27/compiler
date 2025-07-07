@@ -295,11 +295,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     let mut body_node : Node = create_node(NodeType::Body);
     let mut close_curly_node : Node = create_node(NodeType::Separator);
 
-    /* 
-    To add backtracking, all we should theoretically have to do is add
-    elif statements here to check if the next rule matches, and keep on
-    doing this exhaustively for each rule.
-    */
+    
 
     if 
     parse(&mut primitive_node, tokens, current_table) &&
