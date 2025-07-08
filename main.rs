@@ -1,13 +1,14 @@
 use std::fs;
 mod token_c;
 mod parse_c;
-mod generation_c;
+mod code_gen_c;
 mod expression_c;
 mod statement_c;
 mod symbol_table_c;
+mod ir_gen_c;
 
 use crate::token_c::{lex_file, Token};
-use crate::generation_c::generate_code;
+use crate::code_gen_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};
 use crate::symbol_table_c::{*};
 use std::env;
