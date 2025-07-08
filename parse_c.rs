@@ -353,6 +353,8 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut comma_node, tokens, symbol_table) &&
     parse(&mut argument_node, tokens, symbol_table) {
         
+        current_node.properties.insert("primitive".to_string(), prim_node.properties["value"].clone());
+        current_node.properties.insert("identifier".to_string(), identifier_node.properties["value"].clone());
         current_node.children.push(prim_node);
         current_node.children.push(identifier_node);
         current_node.children.push(comma_node);

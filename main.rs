@@ -7,6 +7,7 @@ mod statement_c;
 mod symbol_table_c;
 mod ir_gen_c;
 
+use crate::ir_gen_c::generate_ir;
 use crate::token_c::{lex_file, Token};
 use crate::code_gen_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};
@@ -31,7 +32,9 @@ fn main() {
     if parse(&mut current_node, &token_list, &symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        generate_code(&filename, &mut current_node, &symbol_table);
+        let filename_ir : String = "main_generated.ir".to_string();
+        generate_ir(&filename_ir, &mut current_node, &symbol_table);
+        // generate_code(&filename, &mut current_node, &symbol_table);
     }
     else {
         println!("Sorry there was a parsing error!");
