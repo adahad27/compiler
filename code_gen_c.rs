@@ -382,7 +382,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
                 if symbol_table.scope_lookup(&operand).unwrap().func {
                     generate_children(program_string, current_node, symbol_table, register_manager);
-                    let reg_name : String = current_node.children[0].properties["register"].clone();
+                    //The last child is the one that will be the func_call node
+                    let reg_name : String = current_node.children[current_node.children.len() - 1].properties["register"].clone();
                     if current_node.properties.contains_key("unary") {
                         program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());
                     }

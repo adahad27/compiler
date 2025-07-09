@@ -11,7 +11,7 @@ bool return_false() {
 
 int main(){
     int x = 1;
-    // x = foo();
+    x = foo();
     bool y = return_false();
     
     if(!return_false()) {
