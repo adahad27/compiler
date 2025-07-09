@@ -42,10 +42,16 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
 
             //Save arguments to function on stack here
-
+            if current_node.properties["arguments"].parse::<u32>().unwrap() > 0 {
+                program_string.push_str(format!("\tsub rsp, {}\n", current_node.properties["arguments"].parse::<u32>().unwrap() * 8).as_str());
+            }
+            
 
             //Allocate space for all local variables here
-            program_string.push_str(format!("\tsub rsp, {}\n", current_node.properties["var_alloc"].parse::<u32>().unwrap() * 8).as_str());
+            if current_node.properties["var_alloc"].parse::<u32>().unwrap() > 0 {
+                program_string.push_str(format!("\tsub rsp, {}\n", current_node.properties["var_alloc"].parse::<u32>().unwrap() * 8).as_str());
+            }
+            
 
             //Saving all Callee saved registers upon entering a function.
             program_string.push_str("\tpush rbx\n");

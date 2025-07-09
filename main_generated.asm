@@ -1,6 +1,6 @@
 global foo
-global return_false
 global main
+global return_false
 foo:
 	push rbp
 	mov rbp, rsp
@@ -25,7 +25,6 @@ foo:
 return_false:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 0
 	push rbx
 	push r12
 	push r13
@@ -44,7 +43,7 @@ return_false:
 main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 8
+	sub rsp, 16
 	push rbx
 	push r12
 	push r13
@@ -52,18 +51,22 @@ main:
 	push r15
 	mov qword rbx, 1
 	mov qword [rbp-8], rbx
+	call foo
+	mov qword [rbp-8], rax
+	call return_false
+	mov qword [rbp-16], rax
 	call return_false
 	xor rax, 1
 	cmp rax, 0
 	je .L1
-	mov rbx, [rbp-8]
-	mov qword rcx, 1
-	add rbx, rcx
-	mov qword [rbp-8], rbx
+	mov rax, [rbp-8]
+	mov qword rbx, 1
+	add rax, rbx
+	mov qword [rbp-8], rax
 	jmp .L1
 .L1:
-	mov rbx, [rbp-8]
-	mov rax, rbx
+	mov rax, [rbp-8]
+	mov rax, rax
 	pop r15
 	pop r14
 	pop r13

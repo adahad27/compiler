@@ -309,7 +309,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     {
         symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
         current_node.properties.insert("var_alloc".to_string(), body_node.properties["var_alloc"].clone());
-
+        current_node.properties.insert("arguments".to_string(), arguments_node.properties["arguments"].clone());
         current_node.children.push(primitive_node);
         current_node.children.push(identifier_node);
         current_node.children.push(open_paren_node);
@@ -358,12 +358,15 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         current_node.children.push(prim_node);
         current_node.children.push(identifier_node);
         current_node.children.push(comma_node);
+        //We propagate the number of arguments upwards so that later we know how much space to allocate on stack.
+        let arg_num: i32 = argument_node.properties["arguments"].clone().parse::<i32>().unwrap() + 1;
+        current_node.properties.insert("arguments".to_string(), arg_num.to_string());
         current_node.children.push(argument_node);
         return true;
     }
     else if 
     tokens[get_current_token_index()].val == ")" {
-        
+        current_node.properties.insert("arguments".to_string(), "0".to_string());
         return true;
     }
 

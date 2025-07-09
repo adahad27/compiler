@@ -15,6 +15,8 @@ Implemented features of <C:
 Planned features of <C:
 1. Support for char primitive type
 2. Arrays (Stack allocated)
+3. C-Style Structs
+
 
 Compiler Specifics:
 The rules for Lexical Analysis are based on features of C.
