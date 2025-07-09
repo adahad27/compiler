@@ -10,13 +10,16 @@ Implemented features of <C:
 1. Support for int, bool
 2. Support for arithmetic, boolean, and relational operators
 3. Support for conditional and loop statements
-4.Function declarations, definitions, and calls
+4. Function declarations, definitions, and calls
 
 Planned features of <C:
 1. Support for char primitive type
 2. Arrays (Stack allocated)
 
 Compiler Specifics:
-This compiler uses an LL(1) Recursive Descent Parser to create an Abstract Syntax Tree. For now, there is no conversion to an Intermediate Representation.
+The rules for Lexical Analysis are based on features of C.
+This compiler uses an LL(1) Recursive Descent Parser to create an Abstract Syntax Tree.
+Syntactic and Semantic analysis is done simulataneously within the parser.
+Intermediate Representation, specifically LLVM's IR is being generated for Object Code Generation/Optimization, however this feature is not complete yet, so for the time being, the compiler generates x86 directly from the AST.
 It uses a Post-Order Traversal of the AST to generate the necesary x86 ASM. For register allocation, Linear Scanning will be implemented first, Graph Coloring is being considered.
 For name resolution and scoping similar to C, the compiler uses a doubly linked tree.

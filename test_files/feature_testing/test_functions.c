@@ -11,10 +11,10 @@ bool return_false() {
 
 int main(){
     int x = 1;
-    x = foo();
+    // x = foo();
     bool y = return_false();
     
-    if(!y) {
+    if(!return_false()) {
         x = x + 1;
     }
     return x;

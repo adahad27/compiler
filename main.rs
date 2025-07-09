@@ -26,15 +26,14 @@ fn main() {
     
 
     let token_list : Vec<Token> = lex(args[1].as_str());
-
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
     if parse(&mut current_node, &token_list, &symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        let filename_ir : String = "main_generated.ir".to_string();
-        generate_ir(&filename_ir, &mut current_node, &symbol_table);
-        // generate_code(&filename, &mut current_node, &symbol_table);
+        let filename_ir : String = "main_generated.ll".to_string();
+        // generate_ir(&filename_ir, &mut current_node, &symbol_table);
+        generate_code(&filename, &mut current_node, &symbol_table);
     }
     else {
         println!("Sorry there was a parsing error!");
