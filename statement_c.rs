@@ -5,7 +5,6 @@ use crate::{parse_c::{ create_node, get_current_token_index,  parse, Node, NodeT
 use crate::symbol_table_c::{*};
 
 pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
-
     /* Include all rules for CFGs that have statements on the LHS here. */
     if tokens[get_current_token_index()].val == "return".to_string() {
         let mut return_node : Node = create_node(NodeType::Return_Stmt);

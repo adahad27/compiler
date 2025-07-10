@@ -418,6 +418,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     }
     else if
     parse(&mut constant_node, tokens, symbol_table) {
+        current_node.children.push(constant_node);
         let terminal : String = if
         current_node.children[current_node.children.len() - 1].properties["value"] == "0".to_string() {
             "0".to_string()
@@ -426,7 +427,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
             "1".to_string()
         };
         current_node.properties.insert("terminal".to_string(), terminal);
-        current_node.children.push(constant_node);
+        
         return true;
     }
     return false;
@@ -457,15 +458,14 @@ pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, sym
 pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
     let mut rel_expr_node : Node = create_node(NodeType::Relational_Expr);
-
-    if parse(&mut bool_expr_node, tokens, symbol_table) {
-        //We have a boolean expression
-        current_node.children.push(bool_expr_node);
-        return true;
-    }
-    else if parse(&mut rel_expr_node, tokens, symbol_table) {
+    if parse(&mut rel_expr_node, tokens, symbol_table) {
         //We have a relational expression
         current_node.children.push(rel_expr_node);
+        return true;
+    }
+    else if parse(&mut bool_expr_node, tokens, symbol_table) {
+        //We have a boolean expression
+        current_node.children.push(bool_expr_node);
         return true;
     }
 
@@ -522,7 +522,7 @@ pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_
     let mut identity_node : Node = create_node(NodeType::Identifier);
     let mut operator_node : Node = create_node(NodeType::Operator);
 
-
+    
     if parse(&mut identity_node, tokens, symbol_table) {
 
         if symbol_table.scope_lookup(&identity_node.properties["value"]).unwrap().primitive == "int".to_string() {

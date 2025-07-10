@@ -37,7 +37,8 @@ fn generate_start_stub(program_string : &mut String, symbol_table : &Rc<STNode>)
 fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &Rc<STNode>, register_manager : &mut RegisterManager) {
     match current_node.node_type {
         NodeType::Func_Decl => {
-            program_string.push_str(format!("{}:\n", current_node.children[1].properties["value"]).as_str());
+            let func_name_node : &Node = &current_node.children[1];
+            program_string.push_str(format!("{}:\n", func_name_node.properties["value"]).as_str());
             program_string.push_str(format!("\tpush rbp\n\tmov rbp, rsp\n").as_str());
 
 
@@ -101,7 +102,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 program_string.push_str(format!("\tpush {}\n", current_node.children[0].properties["register"]).as_str());
             }
         }
-
         NodeType::Assign_Expr => {
             let arith_expr : &mut Node = &mut current_node.children[2];
             generate(program_string, arith_expr, symbol_table, register_manager);
@@ -115,6 +115,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             let offset : i32 = symbol_table.scope_lookup(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
             
             register_manager.register_free(register_manager.register_index(&reg_name) as u32);
+
             let operator : String = if offset > 0{"+".to_string()} else {"".to_string()};
             program_string.push_str(format!("\tmov qword [rbp{}{}], {}\n", operator, offset, reg_name).as_str());
 
@@ -135,8 +136,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
             generate(program_string, subexpr_node, symbol_table, register_manager);
             let result_reg : String = 
-            if current_node.children[1].properties.contains_key("register") {
-                current_node.children[1].properties["register"].clone()
+            if subexpr_node.properties.contains_key("register") {
+                subexpr_node.properties["register"].clone()
             }
             else {
                 reg_name
@@ -159,11 +160,12 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
                 let subexpr_node : &mut Node = &mut current_node.children[2];
+
+                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
+                subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 generate(program_string, subexpr_node, symbol_table, register_manager);
             }
             else if current_node.properties.contains_key("terminal") {
@@ -173,8 +175,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 let result_reg : String = term_node.properties["register"].clone();
                 current_node.properties.insert("register".to_string(), result_reg.clone());
             }
-
-            //TODO: Add terminal case for when subexprs end
         }
         NodeType::Arith_Term => {
             
@@ -193,8 +193,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
             generate(program_string, &mut subterm_node, symbol_table, register_manager);
             let result_reg : String = 
-            if current_node.children[1].properties.contains_key("register") {
-                current_node.children[1].properties["register"].clone()
+            if subterm_node.properties.contains_key("register") {
+                subterm_node.properties["register"].clone()
             }
             else {
                 reg_name
@@ -222,14 +222,15 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 program_string.push_str(format!("\tmov rax, {}\n", current_node.properties["prev_register"].clone()).as_str());
                 program_string.push_str(format!("\t{} {}\n", to_operator(operator), result_reg).as_str());
                 program_string.push_str(format!("\tmov {}, rax\n", current_node.properties["prev_register"].clone()).as_str());
-                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
-                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
                 
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
                 let subterm_node : &mut Node = &mut current_node.children[2];
+                //Store the results in the next subexpr node, so that it can pick up from where this node left off if needed.
+                subterm_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 generate(program_string, subterm_node, symbol_table, register_manager);
             }
             else if current_node.properties.contains_key("terminal"){
@@ -285,8 +286,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate(program_string, bool_subexpr_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if current_node.children[1].properties.contains_key("register") {
-                current_node.children[1].properties["register"].clone()
+            if bool_subexpr_node.properties.contains_key("register") {
+                bool_subexpr_node.properties["register"].clone()
             }
             else {
                 reg_name
@@ -305,10 +306,11 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
                 let bool_subexpr_node : &mut Node = &mut current_node.children[2];
+                bool_subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 generate(program_string, bool_subexpr_node, symbol_table, register_manager);
             }
         }
@@ -325,8 +327,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate(program_string, bool_subterm_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if current_node.children[1].properties.contains_key("register") {
-                current_node.children[1].properties["register"].clone()
+            if bool_subterm_node.properties.contains_key("register") {
+                bool_subterm_node.properties["register"].clone()
             }
             else {
                 reg_name
@@ -345,10 +347,11 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
                 let bool_subterm_node : &mut Node = &mut current_node.children[2];
+                bool_subterm_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 generate(program_string, bool_subterm_node, symbol_table, register_manager);
             }
         }
@@ -364,8 +367,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate(program_string, bool_subfactor_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if current_node.children[1].properties.contains_key("register") {
-                current_node.children[1].properties["register"].clone()
+            if bool_subfactor_node.properties.contains_key("register") {
+                bool_subfactor_node.properties["register"].clone()
             }
             else {
                 reg_name
@@ -384,10 +387,11 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
                 register_manager.register_free(register_manager.register_index(&result_reg) as u32);
 
-                current_node.children[2].properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
                 let bool_subfactor_node : &mut Node = &mut current_node.children[2];
+                bool_subfactor_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
                 generate(program_string, bool_subfactor_node, symbol_table, register_manager);
             }
         }
@@ -631,8 +635,9 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
         }
         NodeType::Return_Stmt => {
             generate_children(program_string, current_node, symbol_table, register_manager);
-            if current_node.children[1].properties.contains_key("terminal") {
-                let operand : String = current_node.children[1].properties["terminal"].clone();
+            let ret_expr : &mut Node = &mut current_node.children[1];
+            if ret_expr.properties.contains_key("terminal") {
+                let operand : String = ret_expr.properties["terminal"].clone();
                 let source : String;
                 if is_identifier(&operand) {
                     //Then we have an identifier
