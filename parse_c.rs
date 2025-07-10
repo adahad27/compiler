@@ -300,7 +300,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     let mut body_node : Node = create_node(NodeType::Body);
     let mut close_curly_node : Node = create_node(NodeType::Separator);
 
-    arguments_node.properties.insert("current_arg".to_string(), (-1).to_string());    
+    arguments_node.properties.insert("current_arg".to_string(), (-2).to_string());    
 
     if 
     parse(&mut primitive_node, tokens, current_table) &&

@@ -5,9 +5,9 @@ int foo(int bar) {
     return x + 3;
 }
 
-// bool return_false() {
-//     return 0;
-// }
+bool return_false() {
+    return 0;
+}
 
 int main(){
     int x = 1;
