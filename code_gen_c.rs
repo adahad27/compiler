@@ -91,14 +91,14 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             7.) Restore argument registers?
              */
 
-            program_string.push_str(format!("\tcall {}\n", current_node.properties["identifier"]).as_str());
             generate_children(program_string, current_node, symbol_table, register_manager);
+            program_string.push_str(format!("\tcall {}\n", current_node.properties["identifier"]).as_str());
             current_node.properties.insert("register".to_string(), "rax".to_string());
         }
         NodeType::Call_Args => {
             generate_children(program_string, current_node, symbol_table, register_manager);
             if current_node.children.len() > 0 {
-                program_string.push_str(format!("\tpush {}", current_node.children[0].properties["register"]).as_str());
+                program_string.push_str(format!("\tpush {}\n", current_node.children[0].properties["register"]).as_str());
             }
         }
 

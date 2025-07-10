@@ -360,6 +360,7 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut func_call_node : Node = create_node(NodeType::Func_Call);
+    let mut constant_node : Node = create_node(NodeType::Constant);
 
     if 
     "!" == tokens[get_current_token_index()].val &&
@@ -397,7 +398,8 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
         if
         tokens[get_current_token_index() + 1].val == "(" && 
         parse(&mut func_call_node, tokens, symbol_table) &&
-        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() {
+        (symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "bool".to_string() ||
+        symbol_table.scope_lookup(&func_call_node.properties["identifier"]).unwrap().primitive == "int".to_string()) {
             current_node.properties.insert("terminal".to_string(), func_call_node.properties["identifier"].clone());
             current_node.children.push(func_call_node);
             return true;
@@ -405,13 +407,27 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
         }
         else if 
         parse(&mut identifier_node, tokens, symbol_table) &&
-        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() {
+        (symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "bool".to_string() ||
+        symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().primitive == "int".to_string()){
             current_node.properties.insert("terminal".to_string(), identifier_node.properties["value"].clone());
             current_node.children.push(identifier_node);
             return true;
         }
         prev_token_index();
         return false;
+    }
+    else if
+    parse(&mut constant_node, tokens, symbol_table) {
+        let terminal : String = if
+        current_node.children[current_node.children.len() - 1].properties["value"] == "0".to_string() {
+            "0".to_string()
+        }
+        else {
+            "1".to_string()
+        };
+        current_node.properties.insert("terminal".to_string(), terminal);
+        current_node.children.push(constant_node);
+        return true;
     }
     return false;
 }
@@ -540,7 +556,7 @@ pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut open_paren_node : Node = create_node(NodeType::Separator);
-    let mut arguments_node : Node = create_node(NodeType::Arguments);
+    let mut arguments_node : Node = create_node(NodeType::Call_Args);
     let mut close_paren_node : Node = create_node(NodeType::Separator);
 
     if
@@ -568,19 +584,29 @@ pub fn parse_call_args(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     let mut separator_node : Node = create_node(NodeType::Separator);
     let mut call_arg_node : Node = create_node(NodeType::Call_Args);
 
-
-    if
-    parse(&mut expr_node, tokens, symbol_table) &&
-    parse(&mut separator_node, tokens, symbol_table) &&
-    parse(&mut call_arg_node, tokens, symbol_table) {
-
-        current_node.children.push(expr_node);
-        current_node.children.push(separator_node);
-        current_node.children.push(call_arg_node);
-
+    if tokens[get_current_token_index()].val == ")".to_string() {
         return true;
     }
-    else if tokens[get_current_token_index()].val == ")".to_string() {
+
+    if
+    parse(&mut expr_node, tokens, symbol_table) {
+
+        current_node.children.push(expr_node);
+        if tokens[get_current_token_index()].val == ")".to_string() {
+
+            return true;
+        }
+        if 
+        parse(&mut separator_node, tokens, symbol_table) &&
+        parse(&mut call_arg_node, tokens, symbol_table) {
+            current_node.children.push(separator_node);
+            current_node.children.push(call_arg_node);
+            return true;
+        }
+
+        
+        
+
         return true;
     }
 
