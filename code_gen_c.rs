@@ -55,12 +55,12 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             
 
             //Saving all Callee saved registers upon entering a function.
-            program_string.push_str("\tpush rbx\n");
-            let mut index : u32 = 12;
-            while index < 16 {
-                program_string.push_str(format!("\tpush r{}\n", index).as_str());
-                index += 1;
-            }
+            // program_string.push_str("\tpush rbx\n");
+            // let mut index : u32 = 12;
+            // while index < 16 {
+            //     program_string.push_str(format!("\tpush r{}\n", index).as_str());
+            //     index += 1;
+            // }
 
             //This line is responsible for using the correct child node for the code segment to have it's own scope
             let current_symbol_table: &Rc<STNode> = &symbol_table.children.borrow()[*symbol_table.scope_index.borrow()];
@@ -69,13 +69,13 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             *symbol_table.scope_index.borrow_mut() += 1;
             
 
-            //Restoring all Calle saved registers upon exiting a function.
-            index -= 1;
-            while index > 11 {
-                program_string.push_str(format!("\tpop r{}\n", index).as_str());
-                index -= 1;
-            }
-            program_string.push_str("\tpop rbx\n");
+            //Restoring all Callee saved registers upon exiting a function.
+            // index -= 1;
+            // while index > 11 {
+            //     program_string.push_str(format!("\tpop r{}\n", index).as_str());
+            //     index -= 1;
+            // }
+            // program_string.push_str("\tpop rbx\n");
 
             program_string.push_str(format!("\tmov rsp, rbp\n\tpop rbp\n\tret\n").as_str());
             
@@ -96,7 +96,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             current_node.properties.insert("register".to_string(), "rax".to_string());
         }
         NodeType::Call_Args => {
-
+            generate_children(program_string, current_node, symbol_table, register_manager);
+            if current_node.children.len() > 0 {
+                program_string.push_str(format!("\tpush {}", current_node.children[0].properties["register"]).as_str());
+            }
         }
 
         NodeType::Assign_Expr => {
@@ -112,8 +115,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             let offset : i32 = symbol_table.scope_lookup(&current_node.properties["identifier"]).unwrap().addr.clone() as i32;
             
             register_manager.register_free(register_manager.register_index(&reg_name) as u32);
-
-            program_string.push_str(format!("\tmov qword [rbp-{}], {}\n", offset, reg_name).as_str());
+            let operator : String = if offset > 0{"+".to_string()} else {"".to_string()};
+            program_string.push_str(format!("\tmov qword [rbp{}{}], {}\n", operator, offset, reg_name).as_str());
 
         }
         NodeType::Arith_Expr => {
@@ -252,7 +255,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                     let reg_name : String = register_manager.register_name(reg_index);
 
                     let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
-                    program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
+                    let operator : String = if offset > 0{"+".to_string()} else {"".to_string()};
+                    program_string.push_str(format!("\tmov {}, [rbp{}{}]\n", reg_name,operator, offset).as_str());
                     
                     symbol_table.modify_register(&current_node.properties["terminal"], register_manager.register_index(&reg_name.clone()));
                     current_node.properties.insert("register".to_string(), reg_name);
@@ -405,7 +409,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                     let reg_name : String = register_manager.register_name(reg_index);
 
                     let offset : i32 = symbol_table.scope_lookup(&current_node.properties["terminal"]).unwrap().addr.clone() as i32;
-                    program_string.push_str(format!("\tmov {}, [rbp-{}]\n", reg_name, offset).as_str());
+                    let operator : String = if offset > 0{"+".to_string()} else {"".to_string()};
+                    program_string.push_str(format!("\tmov {}, [rbp{}{}]\n", reg_name, operator, offset).as_str());
                     
                     if current_node.properties.contains_key("unary") {
                         program_string.push_str(format!("\txor {}, 1\n", reg_name).as_str());

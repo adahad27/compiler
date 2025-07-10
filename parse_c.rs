@@ -300,7 +300,7 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     let mut body_node : Node = create_node(NodeType::Body);
     let mut close_curly_node : Node = create_node(NodeType::Separator);
 
-    
+    arguments_node.properties.insert("current_arg".to_string(), (-1).to_string());    
 
     if 
     parse(&mut primitive_node, tokens, current_table) &&
@@ -349,7 +349,7 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
 
     let mut prim_node : Node = create_node(NodeType::Primitive);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
-    let mut comma_node : Node = create_node(NodeType::Separator);
+    let mut separator_node : Node = create_node(NodeType::Separator);
     let mut argument_node : Node = create_node(NodeType::Arguments);
 
     if tokens[get_current_token_index()].val == ")" {
@@ -357,29 +357,36 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         return true;
     }
 
-    let current_arg : u32 = current_node.properties["current_arg"].parse::<u32>().unwrap();
+    let current_arg : i32 = current_node.properties["current_arg"].parse::<i32>().unwrap();
     argument_node.properties.insert("current_arg".to_string(), (current_arg + 1).to_string());
 
     if
     parse(&mut prim_node, tokens, symbol_table) &&
-    parse(&mut identifier_node, tokens, symbol_table) &&
-    parse(&mut comma_node, tokens, symbol_table) &&
-    parse(&mut argument_node, tokens, symbol_table) {
-        
+    parse(&mut identifier_node, tokens, symbol_table) {
+
         current_node.properties.insert("primitive".to_string(), prim_node.properties["value"].clone());
         current_node.properties.insert("identifier".to_string(), identifier_node.properties["value"].clone());
-
-        symbol_table.bind_arg(&identifier_node.properties["value"], &prim_node.properties["value"], current_arg);
-
+        symbol_table.bind_arg(&identifier_node.properties["value"], &prim_node.properties["value"], current_arg * -1);
         current_node.children.push(prim_node);
         current_node.children.push(identifier_node);
-        current_node.children.push(comma_node);
 
-        //We propagate the number of arguments upwards so that later we know how much space to allocate on stack.
-        let arg_num: i32 = argument_node.properties["arguments"].clone().parse::<i32>().unwrap() + 1;
-        current_node.properties.insert("arguments".to_string(), arg_num.to_string());
-        current_node.children.push(argument_node);
-        return true;
+        if 
+        tokens[get_current_token_index()].val == ")" {
+            current_node.children.push(separator_node);
+            current_node.properties.insert("arguments".to_string(), "0".to_string());
+            return true;
+        }
+        if 
+        parse(&mut separator_node, tokens, symbol_table) &&
+        parse(&mut argument_node, tokens, symbol_table) {
+            current_node.children.push(separator_node);
+            //We propagate the number of arguments upwards so that later we know how much space to allocate on stack.
+            let arg_num: i32 = argument_node.properties["arguments"].clone().parse::<i32>().unwrap() + 1;
+            current_node.properties.insert("arguments".to_string(), arg_num.to_string());
+            current_node.children.push(argument_node);
+            return true;
+        }
+        
     }
     
 

@@ -14,7 +14,7 @@ pub struct Symbol {
 
 pub struct SymbolTable {
     pub symbol_table : HashMap<String, Symbol>,
-    pub ordinal : u32
+    pub ordinal : i32
 }
 
 
@@ -29,7 +29,7 @@ impl SymbolTable {
         self.ordinal += 1;
     }
 
-    pub fn insert_argument(&mut self, identifier : &String, prim : &String, arg_ordinal : u32) {
+    pub fn insert_argument(&mut self, identifier : &String, prim : &String, arg_ordinal : i32) {
         self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : arg_ordinal as i32 * 8, size : 8, register : -1, func : false});
     }
 
@@ -64,7 +64,7 @@ pub struct STNode {
 }
 
 pub trait TreeMethods {
-    fn push_child(&self, ordinal : u32);
+    fn push_child(&self, ordinal : i32);
     
     fn get_table(&self) -> RefMut<SymbolTable>;
 
@@ -72,16 +72,16 @@ pub trait TreeMethods {
 
     fn bind(&self, identifier : &String, prim : &String, func : bool);
 
-    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : u32);
+    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : i32);
 
     fn modify_register(&self, identifier : &String, register : i32);
 
-    fn get_ordinal(&self) -> u32;
+    fn get_ordinal(&self) -> i32;
 
     fn in_table(&self, identifier : &String) -> bool;
 }
 
-pub fn create_new_stnode(ordinal : u32) -> Rc<STNode> {
+pub fn create_new_stnode(ordinal : i32) -> Rc<STNode> {
     let sym_tab: SymbolTable = SymbolTable {
         symbol_table : HashMap::new(),
         ordinal : ordinal
@@ -97,7 +97,7 @@ pub fn create_new_stnode(ordinal : u32) -> Rc<STNode> {
 
 impl TreeMethods for Rc<STNode> {
 
-    fn push_child(&self, ordinal : u32) {
+    fn push_child(&self, ordinal : i32) {
         
         let child: Rc<STNode> = create_new_stnode(ordinal);
 
@@ -133,7 +133,7 @@ impl TreeMethods for Rc<STNode> {
         self.table.borrow_mut().insert(identifier, prim, func);
     }
 
-    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : u32) {
+    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : i32) {
         self.table.borrow_mut().insert_argument(identifier, prim, arg_ordinal);
     }
 
@@ -162,7 +162,7 @@ impl TreeMethods for Rc<STNode> {
         return false;
     }
 
-    fn get_ordinal(&self) -> u32 {
+    fn get_ordinal(&self) -> i32 {
         return self.table.borrow().ordinal;
     }
 }
