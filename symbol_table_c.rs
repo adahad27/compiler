@@ -6,7 +6,7 @@ use std::cell::{RefCell, RefMut};
 #[derive(Clone)]
 pub struct Symbol {
     pub primitive : String, 
-    pub addr : u32,
+    pub addr : i32,
     pub size : u32,
     pub register : i32,
     pub func : bool
@@ -23,10 +23,14 @@ impl SymbolTable {
     for easier assembly generation */
     pub fn insert(&mut self, identifier : &String, prim : &String, func : bool) {
         //Construct symbol
-        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal * 8, size : 8, register : -1, func : func});
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : self.ordinal as i32 * -8, size : 8, register : -1, func : func});
 
         //Update stack pointer
         self.ordinal += 1;
+    }
+
+    pub fn insert_argument(&mut self, identifier : &String, prim : &String, arg_ordinal : u32) {
+        self.symbol_table.insert(identifier.clone(), Symbol{primitive : prim.clone(), addr : arg_ordinal as i32 * 8, size : 8, register : -1, func : false});
     }
 
     pub fn query(&self, identifier : &String) -> Option<&Symbol>{
@@ -67,6 +71,8 @@ pub trait TreeMethods {
     fn scope_lookup(&self, identifier : &String) -> Option<Symbol>;
 
     fn bind(&self, identifier : &String, prim : &String, func : bool);
+
+    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : u32);
 
     fn modify_register(&self, identifier : &String, register : i32);
 
@@ -125,6 +131,10 @@ impl TreeMethods for Rc<STNode> {
 
     fn bind(&self, identifier : &String, prim : &String, func : bool) {
         self.table.borrow_mut().insert(identifier, prim, func);
+    }
+
+    fn bind_arg(&self, identifier : &String, prim : &String, arg_ordinal : u32) {
+        self.table.borrow_mut().insert_argument(identifier, prim, arg_ordinal);
     }
 
     fn modify_register(&self, identifier : &String, register : i32) {

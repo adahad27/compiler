@@ -32,7 +32,8 @@ x   func_decl -> primitive identifier (arguments);
     statement -> assign_expr ;
     statement -> func_call ;
     
-    func_call -> identifier (arguments)
+    func_call -> identifier (call_args)
+    call_args -> [expr, call_args] | empty
 
     arith_expr -> arith_term subexpr
     subexpr -> [+ arith_term subexpr] | [- arith_term subexpr] | arith_term | empty
@@ -73,6 +74,7 @@ x   func_decl -> primitive identifier (arguments);
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::thread::current;
 
 use crate::token_c::{TokenType, Token};
 use crate::expression_c::{*};
@@ -128,6 +130,7 @@ pub enum NodeType {
     Func_Decl,
     Other_Decl,
     Func_Call,
+    Call_Args,
     Arguments,
     Primitive,
     Identifier,
@@ -189,6 +192,8 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<
         NodeType::Func_Call => parse_func_call(current_node, tokens, symbol_table),
 
         NodeType::Func_Decl => parse_func_decl(current_node, tokens, symbol_table),
+
+        NodeType::Call_Args => parse_call_args(current_node, tokens, symbol_table),
 
         NodeType::Arguments => parse_arguments(current_node, tokens, symbol_table),
 
@@ -347,6 +352,14 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     let mut comma_node : Node = create_node(NodeType::Separator);
     let mut argument_node : Node = create_node(NodeType::Arguments);
 
+    if tokens[get_current_token_index()].val == ")" {
+        current_node.properties.insert("arguments".to_string(), "0".to_string());
+        return true;
+    }
+
+    let current_arg : u32 = current_node.properties["current_arg"].parse::<u32>().unwrap();
+    argument_node.properties.insert("current_arg".to_string(), (current_arg + 1).to_string());
+
     if
     parse(&mut prim_node, tokens, symbol_table) &&
     parse(&mut identifier_node, tokens, symbol_table) &&
@@ -355,20 +368,20 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         
         current_node.properties.insert("primitive".to_string(), prim_node.properties["value"].clone());
         current_node.properties.insert("identifier".to_string(), identifier_node.properties["value"].clone());
+
+        symbol_table.bind_arg(&identifier_node.properties["value"], &prim_node.properties["value"], current_arg);
+
         current_node.children.push(prim_node);
         current_node.children.push(identifier_node);
         current_node.children.push(comma_node);
+
         //We propagate the number of arguments upwards so that later we know how much space to allocate on stack.
         let arg_num: i32 = argument_node.properties["arguments"].clone().parse::<i32>().unwrap() + 1;
         current_node.properties.insert("arguments".to_string(), arg_num.to_string());
         current_node.children.push(argument_node);
         return true;
     }
-    else if 
-    tokens[get_current_token_index()].val == ")" {
-        current_node.properties.insert("arguments".to_string(), "0".to_string());
-        return true;
-    }
+    
 
 
     return false;

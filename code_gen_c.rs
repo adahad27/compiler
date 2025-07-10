@@ -42,8 +42,9 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
 
             //Save arguments to function on stack here
-            if current_node.properties["arguments"].parse::<u32>().unwrap() > 0 {
-                program_string.push_str(format!("\tsub rsp, {}\n", current_node.properties["arguments"].parse::<u32>().unwrap() * 8).as_str());
+            let num_args: u32 = current_node.properties["arguments"].parse::<u32>().unwrap();
+            if num_args > 0 {
+                program_string.push_str(format!("\tsub rsp, {}\n", num_args * 8).as_str());
             }
             
 
@@ -94,6 +95,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate_children(program_string, current_node, symbol_table, register_manager);
             current_node.properties.insert("register".to_string(), "rax".to_string());
         }
+        NodeType::Call_Args => {
+
+        }
+
         NodeType::Assign_Expr => {
             let arith_expr : &mut Node = &mut current_node.children[2];
             generate(program_string, arith_expr, symbol_table, register_manager);

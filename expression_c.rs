@@ -562,3 +562,27 @@ pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 
     return false;
 }
+
+pub fn parse_call_args(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    let mut expr_node : Node = create_node(NodeType::Expression);
+    let mut separator_node : Node = create_node(NodeType::Separator);
+    let mut call_arg_node : Node = create_node(NodeType::Call_Args);
+
+
+    if
+    parse(&mut expr_node, tokens, symbol_table) &&
+    parse(&mut separator_node, tokens, symbol_table) &&
+    parse(&mut call_arg_node, tokens, symbol_table) {
+
+        current_node.children.push(expr_node);
+        current_node.children.push(separator_node);
+        current_node.children.push(call_arg_node);
+
+        return true;
+    }
+    else if tokens[get_current_token_index()].val == ")".to_string() {
+        return true;
+    }
+
+    return false;
+}
