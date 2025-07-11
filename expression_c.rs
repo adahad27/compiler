@@ -17,7 +17,6 @@ fn parse_non_terminal_expr(current_node : &mut Node, tokens : &Vec<Token>, symbo
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         }
-
         return true;
     }
 
@@ -49,6 +48,13 @@ fn parse_non_terminal_subexpr(current_node : &mut Node, tokens : &Vec<Token>, sy
         current_node.children.push(subexpr_node);
 
         current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
+        return true;
+    }
+    else if parse(&mut expr_node, tokens, symbol_table) {
+
+        current_node.children.push(expr_node);
+        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        return true;
     }
     else if is_separator(&tokens[get_current_token_index()].val) {
         return true;
@@ -66,8 +72,8 @@ pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
 pub fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
     let mut semantic_requirements : Vec<String> = Vec::new();
-    semantic_requirements.push("*".to_string());
-    semantic_requirements.push("/".to_string());
+    semantic_requirements.push("+".to_string());
+    semantic_requirements.push("-".to_string());
 
     return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Arith_Term, NodeType::Arith_Subexpr, &semantic_requirements);
 }
@@ -243,14 +249,7 @@ pub fn parse_not_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
     else if
     parse(&mut constant_node, tokens, symbol_table) {
         current_node.children.push(constant_node);
-        let terminal : String = if
-        current_node.children[current_node.children.len() - 1].properties["value"] == "0".to_string() {
-            "0".to_string()
-        }
-        else {
-            "1".to_string()
-        };
-        current_node.properties.insert("terminal".to_string(), terminal);
+        current_node.properties.insert("terminal".to_string(), current_node.children[current_node.children.len() - 1].properties["value"].clone());
         
         return true;
     }

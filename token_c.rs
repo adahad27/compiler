@@ -56,38 +56,38 @@ pub fn is_operator(input : &String) -> bool {
     return false;
 }
 
-pub fn is_arith_operator(input : &String) -> bool {
-    if
-    input == "+" ||
-    input == "-" ||
-    input == "*" ||
-    input == "/" {
-        return true;
-    }
-    return false;
-}
+// pub fn is_arith_operator(input : &String) -> bool {
+//     if
+//     input == "+" ||
+//     input == "-" ||
+//     input == "*" ||
+//     input == "/" {
+//         return true;
+//     }
+//     return false;
+// }
 
-pub fn is_bool_operator(input : &String) -> bool {
-    if
-    input == "==" ||
-    input == "!=" ||
-    input == "&&" ||
-    input == "||" {
-        return true;
-    }
-    return false;
-}
+// pub fn is_bool_operator(input : &String) -> bool {
+//     if
+//     input == "==" ||
+//     input == "!=" ||
+//     input == "&&" ||
+//     input == "||" {
+//         return true;
+//     }
+//     return false;
+// }
 
-pub fn is_relational_operator(input : &String) -> bool {
-    if
-    input == "<" ||
-    input == ">" ||
-    input == "<=" ||
-    input == ">=" {
-        return true;
-    }
-    return false;
-}
+// pub fn is_relational_operator(input : &String) -> bool {
+//     if
+//     input == "<" ||
+//     input == ">" ||
+//     input == "<=" ||
+//     input == ">=" {
+//         return true;
+//     }
+//     return false;
+// }
 
 pub fn is_identifier(input : &String) -> bool {
     return input.chars().nth(0).unwrap().is_alphabetic() && !is_keyword(input) && !is_primitive(input);
