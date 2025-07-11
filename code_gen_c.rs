@@ -95,6 +95,8 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             generate_children(program_string, current_node, symbol_table, register_manager);
             program_string.push_str(format!("\tcall {}\n", current_node.properties["identifier"]).as_str());
             current_node.properties.insert("register".to_string(), "rax".to_string());
+            let arg_num = current_node.properties["arguments"].parse::<i32>().unwrap();
+            program_string.push_str(format!("\tadd rsp, {}\n", (arg_num * 8 )).as_str());
         }
         NodeType::Call_Args => {
             generate_children(program_string, current_node, symbol_table, register_manager);

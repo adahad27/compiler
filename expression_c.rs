@@ -463,7 +463,7 @@ pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
         current_node.children.push(rel_expr_node);
         return true;
     }
-    else if parse(&mut bool_expr_node, tokens, symbol_table) {
+    if parse(&mut bool_expr_node, tokens, symbol_table) {
         //We have a boolean expression
         current_node.children.push(bool_expr_node);
         return true;
@@ -565,11 +565,13 @@ pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     parse(&mut arguments_node, tokens, symbol_table) &&
     parse(&mut close_paren_node, tokens, symbol_table) {
         
+        current_node.properties.insert("arguments".to_string(), arguments_node.properties["arguments"].clone());
+
         current_node.children.push(identifier_node);
         current_node.children.push(open_paren_node);
         current_node.children.push(arguments_node);
         current_node.children.push(close_paren_node);
-
+        
         current_node.properties.insert("identifier".to_string(), current_node.children[0].properties["value"].clone());
         return true;
 
@@ -585,6 +587,7 @@ pub fn parse_call_args(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     let mut call_arg_node : Node = create_node(NodeType::Call_Args);
 
     if tokens[get_current_token_index()].val == ")".to_string() {
+        current_node.properties.insert("arguments".to_string(), "0".to_string());
         return true;
     }
 
@@ -593,14 +596,19 @@ pub fn parse_call_args(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 
         current_node.children.push(expr_node);
         if tokens[get_current_token_index()].val == ")".to_string() {
-
+            current_node.properties.insert("arguments".to_string(), "1".to_string());
             return true;
         }
         if 
         parse(&mut separator_node, tokens, symbol_table) &&
         parse(&mut call_arg_node, tokens, symbol_table) {
+
+            let arg_num: i32 = call_arg_node.properties["arguments"].clone().parse::<i32>().unwrap() + 1;
+            current_node.properties.insert("arguments".to_string(), arg_num.to_string());
+
             current_node.children.push(separator_node);
             current_node.children.push(call_arg_node);
+
             return true;
         }
 

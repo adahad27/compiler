@@ -5,9 +5,9 @@ mod code_gen_c;
 mod expression_c;
 mod statement_c;
 mod symbol_table_c;
-mod ir_gen_c;
+// mod ir_gen_c;
 
-use crate::ir_gen_c::generate_ir;
+// use crate::ir_gen_c::generate_ir;
 use crate::token_c::{lex_file, Token};
 use crate::code_gen_c::generate_code;
 use crate::parse_c::{parse, create_node, Node, NodeType};

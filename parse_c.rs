@@ -373,7 +373,7 @@ fn parse_arguments(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
         if 
         tokens[get_current_token_index()].val == ")" {
             current_node.children.push(separator_node);
-            current_node.properties.insert("arguments".to_string(), "0".to_string());
+            current_node.properties.insert("arguments".to_string(), "1".to_string());
             return true;
         }
         if 
