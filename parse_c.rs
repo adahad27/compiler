@@ -41,13 +41,27 @@ x   func_decl -> primitive identifier (arguments);
     arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
     arith_factor -> a | (arith_expr) | func_call
 
+
+    or_expr -> and_expr or_subexpr
+    or_subexpr -> [|| and_expr or_subexpr] | empty
+    and_expr -> equality_expr and_subexpr
+    and_subexpr -> [&& equality_expr and_subexpr] | empty
+    equality_expr -> relational_expr equality_subexpr
+    equality_subexpr -> [[ == | != ] relational_expr equality_subexpr] | empty
+    relational_expr -> not_expr relational_subexpr
+    relational_subexpr -> [[< | <= | > | >=] not_expr relational_subexpr] | empty
+
+    not_expr -> [! | empty] id | keyword | func_call
+
     bool_expr -> bool_term bool_subexpr
     bool_subexpr -> [|| bool_term bool_subexpr] | empty
     bool_term -> bool_factor bool_subterm
     bool_subterm -> [&& bool_factor bool_subterm] | empty
     bool_factor -> bool_operand bool_subfactor
     bool_subfactor -> [== | !=] bool_operand bool_subfactor | empty
-    bool_operand -> [! bool_expr] | id | keyword | func_call
+    bool_operand -> bool_atom bool_suboperand
+    bool_suboperand -> [< | <= | > | >=] bool_atom bool_suboperand | empty
+    bool_atom -> [! bool_expr] | id | keyword | func_call
 
     relational_expr -> arith_expr [< | <= | > | >=] arith_expr
 
@@ -144,14 +158,15 @@ pub enum NodeType {
     Arith_Term,
     Arith_Subterm,
     Arith_Factor,
-    Bool_Expr,
-    Bool_Subexpr,
-    Bool_Term,
-    Bool_Subterm,
-    Bool_Factor,
-    Bool_Subfactor,
-    Bool_Operand,
+    Or_Expr,
+    Or_Subexpr,
+    And_Expr,
+    And_Subexpr,
+    Equality_Expr,
+    Equality_Subexpr,
     Relational_Expr,
+    Relational_Subexpr,
+    Not_Expr,
     Statement,
     If_Stmt,
     Elif_Stmt,
@@ -219,21 +234,23 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<
 
         NodeType::Arith_Factor => parse_arith_factor(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Expr => parse_bool_epxr(current_node, tokens, symbol_table),
+        NodeType::Or_Expr => parse_bool_epxr(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Subexpr => parse_bool_subepxr(current_node, tokens, symbol_table),
+        NodeType::Or_Subexpr => parse_bool_subepxr(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Term => parse_bool_term(current_node, tokens, symbol_table),
+        NodeType::And_Expr => parse_and_expr(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Subterm => parse_bool_subterm(current_node, tokens, symbol_table),
+        NodeType::And_Subexpr => parse_and_subexpr(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Factor => parse_bool_factor(current_node, tokens, symbol_table),
+        NodeType::Equality_Expr => parse_equality_expr(current_node, tokens, symbol_table),
 
-        NodeType::Bool_Subfactor => parse_bool_subfactor(current_node, tokens, symbol_table),
-
-        NodeType::Bool_Operand => parse_bool_operand(current_node, tokens, symbol_table),
+        NodeType::Equality_Subexpr => parse_equality_subexpr(current_node, tokens, symbol_table),
 
         NodeType::Relational_Expr => parse_relational_expr(current_node, tokens, symbol_table),
+
+        NodeType::Relational_Subexpr => parse_relational_subexpr(current_node, tokens, symbol_table),
+
+        NodeType::Not_Expr => parse_not_expr(current_node, tokens, symbol_table),
 
         NodeType::Condition_Expr => parse_cond_expr(current_node, tokens, symbol_table),
 

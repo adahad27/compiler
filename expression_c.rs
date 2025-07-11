@@ -185,16 +185,16 @@ pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol
 
 pub fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-    let mut bool_term_node : Node = create_node(NodeType::Bool_Term);
-    let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
+    let mut and_expr_node : Node = create_node(NodeType::And_Expr);
+    let mut or_subexpr_node : Node = create_node(NodeType::Or_Subexpr);
     
     if
-    parse(&mut bool_term_node, tokens, symbol_table) &&
-    parse(&mut bool_subexpr_node, tokens, symbol_table) {
+    parse(&mut and_expr_node, tokens, symbol_table) &&
+    parse(&mut or_subexpr_node, tokens, symbol_table) {
 
-        current_node.children.push(bool_term_node);
+        current_node.children.push(and_expr_node);
 
-        current_node.children.push(bool_subexpr_node);
+        current_node.children.push(or_subexpr_node);
 
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
@@ -210,22 +210,22 @@ pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol
 
     /* 
     Production rules:
-    bool_subexpr -> [|| bool_term bool_subexpr] | empty
+    or_subexpr -> [|| and_expr or_subexpr] | empty
      */
 
     let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut bool_term_node : Node = create_node(NodeType::Bool_Term);
-    let mut bool_subexpr_node : Node = create_node(NodeType::Bool_Subexpr);
+    let mut and_expr_node : Node = create_node(NodeType::And_Expr);
+    let mut or_subexpr_node : Node = create_node(NodeType::Or_Subexpr);
     if
     "||" == tokens[get_current_token_index()].val &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut bool_term_node, tokens, symbol_table) &&
-    parse(&mut bool_subexpr_node, tokens, symbol_table) {
+    parse(&mut and_expr_node, tokens, symbol_table) &&
+    parse(&mut or_subexpr_node, tokens, symbol_table) {
         //Or case is successful
 
         current_node.children.push(operator_node);
-        current_node.children.push(bool_term_node);
-        current_node.children.push(bool_subexpr_node);
+        current_node.children.push(and_expr_node);
+        current_node.children.push(or_subexpr_node);
 
         current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
         return true;
@@ -239,17 +239,17 @@ pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_and_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-    let mut bool_factor_node : Node = create_node(NodeType::Bool_Factor);
-    let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
+    let mut equality_expr_node : Node = create_node(NodeType::Equality_Expr);
+    let mut and_subexpr_node : Node = create_node(NodeType::And_Subexpr);
     
     if 
-    parse(&mut bool_factor_node, tokens, symbol_table) && 
-    parse(&mut bool_subterm_node, tokens, symbol_table) {
+    parse(&mut equality_expr_node, tokens, symbol_table) && 
+    parse(&mut and_subexpr_node, tokens, symbol_table) {
         
-        current_node.children.push(bool_factor_node);
-        current_node.children.push(bool_subterm_node);
+        current_node.children.push(equality_expr_node);
+        current_node.children.push(and_subexpr_node);
 
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
@@ -262,26 +262,26 @@ pub fn parse_bool_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     return false;
 }
 
-pub fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_and_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
-    bool_subterm -> [&& bool_factor bool_subterm] | empty
+    and_subexpr -> [&& equality_expr and_subexpr] | empty
      */
 
     let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut bool_factor_node : Node = create_node(NodeType::Bool_Factor);
-    let mut bool_subterm_node : Node = create_node(NodeType::Bool_Subterm);
+    let mut equality_expr_node : Node = create_node(NodeType::Equality_Expr);
+    let mut and_subexpr_node : Node = create_node(NodeType::And_Subexpr);
 
     if
     "&&" == tokens[get_current_token_index()].val &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut bool_factor_node, tokens, symbol_table) &&
-    parse(&mut bool_subterm_node, tokens, symbol_table) {
+    parse(&mut equality_expr_node, tokens, symbol_table) &&
+    parse(&mut and_subexpr_node, tokens, symbol_table) {
         //And case is successful
 
         current_node.children.push(operator_node);
-        current_node.children.push(bool_factor_node);
-        current_node.children.push(bool_subterm_node);
+        current_node.children.push(equality_expr_node);
+        current_node.children.push(and_subexpr_node);
 
         current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
         return true;
@@ -295,17 +295,17 @@ pub fn parse_bool_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_equality_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-    let mut bool_operand_node : Node = create_node(NodeType::Bool_Operand);
-    let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
+    let mut relational_expr_node : Node = create_node(NodeType::Relational_Expr);
+    let mut equality_subexpr_node : Node = create_node(NodeType::Equality_Subexpr);
 
     if 
-    parse(&mut bool_operand_node, tokens, symbol_table) && 
-    parse(&mut bool_subfactor_node, tokens, symbol_table) {
+    parse(&mut relational_expr_node, tokens, symbol_table) && 
+    parse(&mut equality_subexpr_node, tokens, symbol_table) {
         
-        current_node.children.push(bool_operand_node);
-        current_node.children.push(bool_subfactor_node);
+        current_node.children.push(relational_expr_node);
+        current_node.children.push(equality_subexpr_node);
 
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
@@ -318,27 +318,27 @@ pub fn parse_bool_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_
     return false;
 }
 
-pub fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_equality_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     /* 
     Production rules:
-    bool_subfactor -> [[== | !=] bool_operand bool_subfactor] | empty
+    equality_subexpr -> [[== | !=] relational_expr equality_subexpr] | empty
      */
 
     let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut bool_operand_node : Node = create_node(NodeType::Bool_Operand);
-    let mut bool_subfactor_node : Node = create_node(NodeType::Bool_Subfactor);
+    let mut relational_expr_node : Node = create_node(NodeType::Relational_Expr);
+    let mut equality_subexpr_node : Node = create_node(NodeType::Equality_Subexpr);
 
     if
     ("==" == tokens[get_current_token_index()].val ||
     "!=" == tokens[get_current_token_index()].val) &&
     parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut bool_operand_node, tokens, symbol_table) &&
-    parse(&mut bool_subfactor_node, tokens, symbol_table) {
+    parse(&mut relational_expr_node, tokens, symbol_table) &&
+    parse(&mut equality_subexpr_node, tokens, symbol_table) {
         //Equals/NotEquals case is successful
 
         current_node.children.push(operator_node);
-        current_node.children.push(bool_operand_node);
-        current_node.children.push(bool_subfactor_node);
+        current_node.children.push(relational_expr_node);
+        current_node.children.push(equality_subexpr_node);
 
         current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
 
@@ -353,10 +353,36 @@ pub fn parse_bool_subfactor(current_node : &mut Node, tokens : &Vec<Token>, symb
     return false;
 }
 
-pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     
+    let mut not_expr_node : Node = create_node(NodeType::Not_Expr);
+    let mut relational_subexpr_node : Node = create_node(NodeType::Relational_Subexpr);
+
+    if 
+    parse(&mut not_expr_node, tokens, symbol_table) && 
+    parse(&mut relational_subexpr_node, tokens, symbol_table) {
+        
+        current_node.children.push(not_expr_node);
+        current_node.children.push(relational_subexpr_node);
+
+        if current_node.children[0].properties.contains_key("terminal") {
+            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
+        }
+
+        return true;
+    }
+
+
+    return false;
+}
+
+pub fn parse_relational_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+
+    return false;
+}
+
+pub fn parse_not_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     let mut operator_node : Node = create_node(NodeType::Operator);
-    // let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
     let mut keyword_node : Node = create_node(NodeType::Keyword);
     let mut identifier_node : Node = create_node(NodeType::Identifier);
     let mut func_call_node : Node = create_node(NodeType::Func_Call);
@@ -432,40 +458,39 @@ pub fn parse_bool_operand(current_node : &mut Node, tokens : &Vec<Token>, symbol
     }
     return false;
 }
+// pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+//     let (mut arith_expr_left, mut arith_expr_right) = (create_node(NodeType::Arith_Expr), create_node(NodeType::Arith_Expr));
+//     let mut operator_node : Node = create_node(NodeType::Operator);
 
-    let (mut arith_expr_left, mut arith_expr_right) = (create_node(NodeType::Arith_Expr), create_node(NodeType::Arith_Expr));
-    let mut operator_node : Node = create_node(NodeType::Operator);
+//     if
+//     parse(&mut arith_expr_left, tokens, symbol_table) &&
+//     parse(&mut operator_node, tokens, symbol_table) &&
+//     parse(&mut arith_expr_right, tokens, symbol_table) {
 
-    if
-    parse(&mut arith_expr_left, tokens, symbol_table) &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut arith_expr_right, tokens, symbol_table) {
+//         current_node.children.push(arith_expr_left);
+//         current_node.children.push(operator_node);
+//         current_node.children.push(arith_expr_right);
 
-        current_node.children.push(arith_expr_left);
-        current_node.children.push(operator_node);
-        current_node.children.push(arith_expr_right);
+//         current_node.properties.insert("operator".to_string(), current_node.children[1].properties["value"].clone());
 
-        current_node.properties.insert("operator".to_string(), current_node.children[1].properties["value"].clone());
+//         return true;
+//     }
 
-        return true;
-    }
-
-    return false;
-}
+//     return false;
+// }
 
 pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    let mut bool_expr_node : Node = create_node(NodeType::Bool_Expr);
+    let mut or_expr_node : Node = create_node(NodeType::Or_Expr);
     let mut rel_expr_node : Node = create_node(NodeType::Relational_Expr);
     if parse(&mut rel_expr_node, tokens, symbol_table) {
         //We have a relational expression
         current_node.children.push(rel_expr_node);
         return true;
     }
-    if parse(&mut bool_expr_node, tokens, symbol_table) {
+    if parse(&mut or_expr_node, tokens, symbol_table) {
         //We have a boolean expression
-        current_node.children.push(bool_expr_node);
+        current_node.children.push(or_expr_node);
         return true;
     }
 

@@ -276,33 +276,33 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 current_node.properties.insert("register".to_string(), reg_name);
             }
         }
-        NodeType::Bool_Expr => {
+        NodeType::Or_Expr => {
             assert!(current_node.properties.contains_key("terminal"));
-            let bool_term_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, bool_term_node, symbol_table, register_manager);
-            let reg_name : String = bool_term_node.properties["register"].clone();
+            let and_expr_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, and_expr_node, symbol_table, register_manager);
+            let reg_name : String = and_expr_node.properties["register"].clone();
 
 
-            let bool_subexpr_node: &mut Node = &mut current_node.children[1];
-            bool_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, bool_subexpr_node, symbol_table, register_manager);
+            let or_subexpr_node: &mut Node = &mut current_node.children[1];
+            or_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+            generate(program_string, or_subexpr_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if bool_subexpr_node.properties.contains_key("register") {
-                bool_subexpr_node.properties["register"].clone()
+            if or_subexpr_node.properties.contains_key("register") {
+                or_subexpr_node.properties["register"].clone()
             }
             else {
                 reg_name
             };
             current_node.properties.insert("register".to_string(), result_reg);
         }
-        NodeType::Bool_Subexpr => {
+        NodeType::Or_Subexpr => {
             if current_node.properties.contains_key("operator") {
                 let operator : String = current_node.properties["operator"].clone();
 
-                let bool_term_node : &mut Node = &mut current_node.children[1];
-                generate(program_string, bool_term_node, symbol_table, register_manager);
-                let result_reg : String = bool_term_node.properties["register"].clone();
+                let and_expr_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, and_expr_node, symbol_table, register_manager);
+                let result_reg : String = and_expr_node.properties["register"].clone();
 
                 and_or_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
@@ -311,39 +311,39 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subexpr_node : &mut Node = &mut current_node.children[2];
-                bool_subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
-                generate(program_string, bool_subexpr_node, symbol_table, register_manager);
+                let or_subexpr_node : &mut Node = &mut current_node.children[2];
+                or_subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                generate(program_string, or_subexpr_node, symbol_table, register_manager);
             }
         }
-        NodeType::Bool_Term => {
+        NodeType::And_Expr => {
             assert!(current_node.properties.contains_key("terminal"));
 
-            let bool_factor_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, bool_factor_node, symbol_table, register_manager);
-            let reg_name : String = bool_factor_node.properties["register"].clone();
+            let equality_expr_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, equality_expr_node, symbol_table, register_manager);
+            let reg_name : String = equality_expr_node.properties["register"].clone();
 
 
-            let bool_subterm_node: &mut Node = &mut current_node.children[1];
-            bool_subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, bool_subterm_node, symbol_table, register_manager);
+            let and_subexpr_node: &mut Node = &mut current_node.children[1];
+            and_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+            generate(program_string, and_subexpr_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if bool_subterm_node.properties.contains_key("register") {
-                bool_subterm_node.properties["register"].clone()
+            if and_subexpr_node.properties.contains_key("register") {
+                and_subexpr_node.properties["register"].clone()
             }
             else {
                 reg_name
             };
             current_node.properties.insert("register".to_string(), result_reg);
         }
-        NodeType::Bool_Subterm => {
+        NodeType::And_Subexpr => {
             if current_node.properties.contains_key("operator") {
                 let operator : String = current_node.properties["operator"].clone();
 
-                let bool_factor_node : &mut Node = &mut current_node.children[1];
-                generate(program_string, bool_factor_node, symbol_table, register_manager);
-                let result_reg : String = bool_factor_node.properties["register"].clone();
+                let equality_expr_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, equality_expr_node, symbol_table, register_manager);
+                let result_reg : String = equality_expr_node.properties["register"].clone();
 
                 and_or_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
@@ -352,38 +352,38 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subterm_node : &mut Node = &mut current_node.children[2];
-                bool_subterm_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
-                generate(program_string, bool_subterm_node, symbol_table, register_manager);
+                let and_subexpr_node : &mut Node = &mut current_node.children[2];
+                and_subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                generate(program_string, and_subexpr_node, symbol_table, register_manager);
             }
         }
-        NodeType::Bool_Factor => {
+        NodeType::Equality_Expr => {
             assert!(current_node.properties.contains_key("terminal"));
-            let bool_operand_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, bool_operand_node, symbol_table, register_manager);
-            let reg_name : String = bool_operand_node.properties["register"].clone();
+            let relational_expr_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, relational_expr_node, symbol_table, register_manager);
+            let reg_name : String = relational_expr_node.properties["register"].clone();
 
 
-            let bool_subfactor_node: &mut Node = &mut current_node.children[1];
-            bool_subfactor_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, bool_subfactor_node, symbol_table, register_manager);
+            let equality_subexpr_node: &mut Node = &mut current_node.children[1];
+            equality_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+            generate(program_string, equality_subexpr_node, symbol_table, register_manager);
             
             let result_reg : String = 
-            if bool_subfactor_node.properties.contains_key("register") {
-                bool_subfactor_node.properties["register"].clone()
+            if equality_subexpr_node.properties.contains_key("register") {
+                equality_subexpr_node.properties["register"].clone()
             }
             else {
                 reg_name
             };
             current_node.properties.insert("register".to_string(), result_reg);
         }
-        NodeType::Bool_Subfactor => {
+        NodeType::Equality_Subexpr => {
             if current_node.properties.contains_key("operator") {
                 let operator : String = current_node.properties["operator"].clone();
 
-                let bool_operand_node : &mut Node = &mut current_node.children[1];
-                generate(program_string, bool_operand_node, symbol_table, register_manager);
-                let result_reg : String = bool_operand_node.properties["register"].clone();
+                let relational_expr_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, relational_expr_node, symbol_table, register_manager);
+                let result_reg : String = relational_expr_node.properties["register"].clone();
 
                 equality_generator(program_string, &operator, &current_node.properties["prev_register"], &result_reg);
 
@@ -392,12 +392,12 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 
                 current_node.properties.insert("register".to_string(), current_node.properties["prev_register"].clone());
 
-                let bool_subfactor_node : &mut Node = &mut current_node.children[2];
-                bool_subfactor_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
-                generate(program_string, bool_subfactor_node, symbol_table, register_manager);
+                let equality_subexpr_node : &mut Node = &mut current_node.children[2];
+                equality_subexpr_node.properties.insert("prev_register".to_string(), current_node.properties["prev_register"].clone());
+                generate(program_string, equality_subexpr_node, symbol_table, register_manager);
             }
         }
-        NodeType::Bool_Operand => {
+        NodeType::Relational_Expr => {
             let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
 
