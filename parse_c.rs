@@ -234,9 +234,9 @@ pub fn parse(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<
 
         NodeType::Arith_Factor => parse_arith_factor(current_node, tokens, symbol_table),
 
-        NodeType::Or_Expr => parse_bool_epxr(current_node, tokens, symbol_table),
+        NodeType::Or_Expr => parse_or_epxr(current_node, tokens, symbol_table),
 
-        NodeType::Or_Subexpr => parse_bool_subepxr(current_node, tokens, symbol_table),
+        NodeType::Or_Subexpr => parse_or_subepxr(current_node, tokens, symbol_table),
 
         NodeType::And_Expr => parse_and_expr(current_node, tokens, symbol_table),
 

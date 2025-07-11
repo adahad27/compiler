@@ -3,144 +3,86 @@ use crate::{parse_c::{ create_node, get_current_token_index, parse, prev_token_i
 use crate::symbol_table_c::{*};
 use std::rc::Rc;
 
+fn parse_non_terminal_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>, expr_type : NodeType, subexpr_type : NodeType) -> bool {
+    let mut expr_node : Node = create_node(expr_type);
+    let mut subexpr_node : Node = create_node(subexpr_type);
+    
+    if
+    parse(&mut expr_node, tokens, symbol_table) &&
+    parse(&mut subexpr_node, tokens, symbol_table) {
 
-pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+        current_node.children.push(expr_node);
+        current_node.children.push(subexpr_node);
 
-    let mut arith_term_node : Node = create_node(NodeType::Arith_Term);
-    let mut arith_subexpr_node : Node = create_node(NodeType::Arith_Subexpr);
-
-
-    if 
-    parse(&mut arith_term_node, tokens, symbol_table) && 
-    parse(&mut arith_subexpr_node, tokens, symbol_table) {
-
-        current_node.children.push(arith_term_node);
         if current_node.children[0].properties.contains_key("terminal") {
             current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
         }
-        
 
-        current_node.children.push(arith_subexpr_node);
-        if current_node.children[1].properties.contains_key("operator") {
-            current_node.properties.insert("operator".to_string(), current_node.children[1].properties["operator"].clone());
+        return true;
+    }
+
+    return false;
+}
+
+fn semantic_check(tokens : &Vec<Token>, semantic_requirements : &Vec<String>) -> bool {
+    for requirement  in semantic_requirements {
+        if &tokens[get_current_token_index()].val == requirement {
+            return true;
         }
+    }
+    return false;
+}
+
+fn parse_non_terminal_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>, expr_type : NodeType, subexpr_type : NodeType, semantic_requirements : &Vec<String>) -> bool {
+    let mut operator_node : Node = create_node(NodeType::Operator);
+    let mut expr_node : Node = create_node(expr_type);
+    let mut subexpr_node : Node = create_node(subexpr_type);
+
+    if
+    semantic_check(tokens, semantic_requirements) &&
+    parse(&mut operator_node, tokens, symbol_table) &&
+    parse(&mut expr_node, tokens, symbol_table) &&
+    parse(&mut subexpr_node, tokens, symbol_table) {
+
+        current_node.children.push(operator_node);
+        current_node.children.push(expr_node);
+        current_node.children.push(subexpr_node);
+
+        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
+    }
+    else if is_separator(&tokens[get_current_token_index()].val) {
+        return true;
+    }
+    else if is_operator(&tokens[get_current_token_index()].val) {
         return true;
     }
     return false;
+}
+
+pub fn parse_arith_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::Arith_Term, NodeType::Arith_Subexpr);
 }
 
 pub fn parse_arith_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    /* 
-    Production rules:
-    arith_subexpr -> [+ term arith_subexpr] | [- term arith_subexpr] | term | empty
-     */
-    let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut arith_term_node : Node = create_node(NodeType::Arith_Term);
-    let mut arith_subexpr_node : Node = create_node(NodeType::Arith_Subexpr);
 
-    if 
-    (tokens[get_current_token_index()].val == "+".to_string() ||
-    tokens[get_current_token_index()].val == "-".to_string()) &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut arith_term_node, tokens, symbol_table) &&
-    parse(&mut arith_subexpr_node, tokens, symbol_table) {
-        
-        //First 2 rules + semantic checking
-        current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
-        current_node.children.push(operator_node);
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("*".to_string());
+    semantic_requirements.push("/".to_string());
 
-        current_node.children.push(arith_term_node);
-        current_node.children.push(arith_subexpr_node);
-
-        return true;
-    }
-    else if parse(&mut arith_term_node, tokens, symbol_table) {
-
-        //3rd rule
-        current_node.children.push(arith_term_node);
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        return true;
-    }
-    else if is_operator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    else if is_separator(&tokens[get_current_token_index()].val) {
-        
-        //This is equivalent to the empty character case because ; signifies the end of the expression
-        return true;
-    }
-
-    return false;
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Arith_Term, NodeType::Arith_Subexpr, &semantic_requirements);
 }
 
 pub fn parse_arith_term(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    /* 
-    Production rules:
-    arith_term -> constant | identifier subarith_term
-     */
-
-    let mut arith_factor_node : Node = create_node(NodeType::Arith_Factor);
-    let mut arith_subterm_node : Node = create_node(NodeType::Arith_Subterm);
-
-    if 
-    parse(&mut arith_factor_node, tokens, symbol_table)  && 
-    parse(&mut arith_subterm_node, tokens, symbol_table){
-        
-        current_node.children.push(arith_factor_node);
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-
-        current_node.children.push(arith_subterm_node);
-        if current_node.children[1].properties.contains_key("operator") {
-            current_node.properties.insert("operator".to_string(), current_node.children[1].properties["operator"].clone());
-        }
-        return true;
-    }
-
-    return false;
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::Arith_Factor, NodeType::Arith_Subterm);
 }
 
 pub fn parse_arith_subterm(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    /* 
-    Production rules:
-    arith_subterm -> [* arith_factor arith_subterm] | [/ arith_factor arith_subterm] | arith_factor | empty
-     */
-    let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut arith_factor_node : Node = create_node(NodeType::Arith_Factor);
-    let mut arith_subterm_node : Node = create_node(NodeType::Arith_Subterm);
-    if 
-    (tokens[get_current_token_index()].val == "*".to_string() ||
-    tokens[get_current_token_index()].val == "/".to_string()) &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut arith_factor_node, tokens, symbol_table) &&
-    parse(&mut arith_subterm_node, tokens, symbol_table) {
-        
-        //First 2 rules + semantic checking
-        
-        current_node.properties.insert("operator".to_string(), operator_node.properties["value"].clone());
-        current_node.children.push(operator_node);
 
-        current_node.children.push(arith_factor_node);
-        current_node.children.push(arith_subterm_node);
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("*".to_string());
+    semantic_requirements.push("/".to_string());
 
-        return true;
-    }
-    else if parse(&mut arith_factor_node, tokens, symbol_table) {
-
-        //3rd rule
-        current_node.children.push(arith_factor_node);
-        current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        return true;
-    }
-    else if is_operator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    else if is_separator(&tokens[get_current_token_index()].val) {
-        
-        //This is equivalent to the empty character case because ; signifies the end of the expression
-        return true;
-    }
-
-    return false;
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Arith_Factor, NodeType::Arith_Subterm, &semantic_requirements);
 }
 
 pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
@@ -183,202 +125,58 @@ pub fn parse_arith_factor(current_node : &mut Node, tokens : &Vec<Token>, symbol
     return false;
 }
 
-pub fn parse_bool_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-
-    let mut and_expr_node : Node = create_node(NodeType::And_Expr);
-    let mut or_subexpr_node : Node = create_node(NodeType::Or_Subexpr);
-    
-    if
-    parse(&mut and_expr_node, tokens, symbol_table) &&
-    parse(&mut or_subexpr_node, tokens, symbol_table) {
-
-        current_node.children.push(and_expr_node);
-
-        current_node.children.push(or_subexpr_node);
-
-        if current_node.children[0].properties.contains_key("terminal") {
-            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        }
-
-        return true;
-    }
-
-    return false;
+pub fn parse_or_epxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::And_Expr, NodeType::Or_Subexpr);
 }
 
-pub fn parse_bool_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
+pub fn parse_or_subepxr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-    /* 
-    Production rules:
-    or_subexpr -> [|| and_expr or_subexpr] | empty
-     */
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("||".to_string());
 
-    let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut and_expr_node : Node = create_node(NodeType::And_Expr);
-    let mut or_subexpr_node : Node = create_node(NodeType::Or_Subexpr);
-    if
-    "||" == tokens[get_current_token_index()].val &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut and_expr_node, tokens, symbol_table) &&
-    parse(&mut or_subexpr_node, tokens, symbol_table) {
-        //Or case is successful
-
-        current_node.children.push(operator_node);
-        current_node.children.push(and_expr_node);
-        current_node.children.push(or_subexpr_node);
-
-        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
-        return true;
-    }
-    else if is_separator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    else if is_operator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    return false;
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::And_Expr, NodeType::Or_Subexpr, &semantic_requirements);
 }
 
 pub fn parse_and_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-
-    let mut equality_expr_node : Node = create_node(NodeType::Equality_Expr);
-    let mut and_subexpr_node : Node = create_node(NodeType::And_Subexpr);
-    
-    if 
-    parse(&mut equality_expr_node, tokens, symbol_table) && 
-    parse(&mut and_subexpr_node, tokens, symbol_table) {
-        
-        current_node.children.push(equality_expr_node);
-        current_node.children.push(and_subexpr_node);
-
-        if current_node.children[0].properties.contains_key("terminal") {
-            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        }
-
-        return true;
-    }
-
-
-    return false;
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::Equality_Expr, NodeType::And_Subexpr);
 }
 
 pub fn parse_and_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    /* 
-    Production rules:
-    and_subexpr -> [&& equality_expr and_subexpr] | empty
-     */
 
-    let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut equality_expr_node : Node = create_node(NodeType::Equality_Expr);
-    let mut and_subexpr_node : Node = create_node(NodeType::And_Subexpr);
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("&&".to_string());
 
-    if
-    "&&" == tokens[get_current_token_index()].val &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut equality_expr_node, tokens, symbol_table) &&
-    parse(&mut and_subexpr_node, tokens, symbol_table) {
-        //And case is successful
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Equality_Expr, NodeType::And_Subexpr, &semantic_requirements);
 
-        current_node.children.push(operator_node);
-        current_node.children.push(equality_expr_node);
-        current_node.children.push(and_subexpr_node);
-
-        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
-        return true;
-    }
-    else if is_separator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    else if is_operator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    return false;
 }
 
 pub fn parse_equality_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-
-    let mut relational_expr_node : Node = create_node(NodeType::Relational_Expr);
-    let mut equality_subexpr_node : Node = create_node(NodeType::Equality_Subexpr);
-
-    if 
-    parse(&mut relational_expr_node, tokens, symbol_table) && 
-    parse(&mut equality_subexpr_node, tokens, symbol_table) {
-        
-        current_node.children.push(relational_expr_node);
-        current_node.children.push(equality_subexpr_node);
-
-        if current_node.children[0].properties.contains_key("terminal") {
-            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        }
-
-        return true;
-    }
-
-
-    return false;
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::Relational_Expr, NodeType::Equality_Subexpr);
 }
 
 pub fn parse_equality_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    /* 
-    Production rules:
-    equality_subexpr -> [[== | !=] relational_expr equality_subexpr] | empty
-     */
 
-    let mut operator_node : Node = create_node(NodeType::Operator);
-    let mut relational_expr_node : Node = create_node(NodeType::Relational_Expr);
-    let mut equality_subexpr_node : Node = create_node(NodeType::Equality_Subexpr);
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("==".to_string());
+    semantic_requirements.push("!=".to_string());
 
-    if
-    ("==" == tokens[get_current_token_index()].val ||
-    "!=" == tokens[get_current_token_index()].val) &&
-    parse(&mut operator_node, tokens, symbol_table) &&
-    parse(&mut relational_expr_node, tokens, symbol_table) &&
-    parse(&mut equality_subexpr_node, tokens, symbol_table) {
-        //Equals/NotEquals case is successful
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Relational_Expr, NodeType::Equality_Subexpr, &semantic_requirements);
 
-        current_node.children.push(operator_node);
-        current_node.children.push(relational_expr_node);
-        current_node.children.push(equality_subexpr_node);
-
-        current_node.properties.insert("operator".to_string(), current_node.children[0].properties["value"].clone());
-
-        return true
-    }
-    else if is_separator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    else if is_operator(&tokens[get_current_token_index()].val) {
-        return true;
-    }
-    return false;
 }
 
-pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    
-    let mut not_expr_node : Node = create_node(NodeType::Not_Expr);
-    let mut relational_subexpr_node : Node = create_node(NodeType::Relational_Subexpr);
-
-    if 
-    parse(&mut not_expr_node, tokens, symbol_table) && 
-    parse(&mut relational_subexpr_node, tokens, symbol_table) {
-        
-        current_node.children.push(not_expr_node);
-        current_node.children.push(relational_subexpr_node);
-
-        if current_node.children[0].properties.contains_key("terminal") {
-            current_node.properties.insert("terminal".to_string(), current_node.children[0].properties["terminal"].clone());
-        }
-
-        return true;
-    }
-
-
-    return false;
+pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {   
+    return parse_non_terminal_expr(current_node, tokens, symbol_table, NodeType::Not_Expr, NodeType::Relational_Subexpr);
 }
 
 pub fn parse_relational_subexpr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
 
-    return false;
+    let mut semantic_requirements : Vec<String> = Vec::new();
+    semantic_requirements.push("<".to_string());
+    semantic_requirements.push(">".to_string());
+    semantic_requirements.push("<=".to_string());
+    semantic_requirements.push(">=".to_string());
+
+    return parse_non_terminal_subexpr(current_node, tokens, symbol_table, NodeType::Not_Expr, NodeType::Relational_Subexpr, &semantic_requirements);
 }
 
 pub fn parse_not_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
@@ -458,27 +256,6 @@ pub fn parse_not_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
     }
     return false;
 }
-// pub fn parse_relational_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-
-//     let (mut arith_expr_left, mut arith_expr_right) = (create_node(NodeType::Arith_Expr), create_node(NodeType::Arith_Expr));
-//     let mut operator_node : Node = create_node(NodeType::Operator);
-
-//     if
-//     parse(&mut arith_expr_left, tokens, symbol_table) &&
-//     parse(&mut operator_node, tokens, symbol_table) &&
-//     parse(&mut arith_expr_right, tokens, symbol_table) {
-
-//         current_node.children.push(arith_expr_left);
-//         current_node.children.push(operator_node);
-//         current_node.children.push(arith_expr_right);
-
-//         current_node.properties.insert("operator".to_string(), current_node.children[1].properties["value"].clone());
-
-//         return true;
-//     }
-
-//     return false;
-// }
 
 pub fn parse_cond_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
     let mut or_expr_node : Node = create_node(NodeType::Or_Expr);
