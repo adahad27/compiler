@@ -19,7 +19,6 @@ pub enum TokenType {
     // !, ==, !=, &&, ||, <, >, <=, >=, +, -, +=, -=
     Operator,
     Constant, //Only handling decimal numbers for now
-    Special,
     Default
 }
 

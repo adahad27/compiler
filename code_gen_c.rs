@@ -397,7 +397,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 generate(program_string, equality_subexpr_node, symbol_table, register_manager);
             }
         }
-        NodeType::Relational_Expr => {
+        NodeType::Not_Expr => {
             let operand : String = current_node.properties["terminal"].clone();
             if is_identifier(&operand) {
 
@@ -443,32 +443,64 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::Relational_Expr => {
-            let arith_node_left : &mut Node = &mut current_node.children[0];
-            generate(program_string, arith_node_left, symbol_table, register_manager);
-            let left_reg : String = arith_node_left.properties["register"].clone();
+            assert!(current_node.properties.contains_key("terminal"));
+            let expr_node: &mut Node = &mut current_node.children[0];
+            generate(program_string, expr_node, symbol_table, register_manager);
+            let reg_name : String = expr_node.properties["register"].clone();
 
-            let arith_node_right : &mut Node = &mut current_node.children[2];
-            generate(program_string, arith_node_right, symbol_table, register_manager);
-            let right_reg : String = arith_node_right.properties["register"].clone();
 
-            let operator : String = current_node.properties["operator"].clone();
-
-            let label_true : String = label_name(label_create());
-            let label_done : String = label_name(label_create());
-
-            //After doing comparison, the results will be stored in the register named in arith_node_left
+            let subexpr_node: &mut Node = &mut current_node.children[1];
+            subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+            generate(program_string, subexpr_node, symbol_table, register_manager);
             
-            program_string.push_str(format!("\tcmp {}, {}\n", left_reg, right_reg).as_str());
-            program_string.push_str(format!("\t{} {}\n", jump_command(operator), label_true).as_str());
-            program_string.push_str(format!("\tmov {}, 0\n", left_reg).as_str());
-            program_string.push_str(format!("\tjmp {}\n", label_done).as_str());
-            program_string.push_str(format!("{}:\n", label_true).as_str());
-            program_string.push_str(format!("\tmov {}, 1\n", left_reg).as_str());
-            program_string.push_str(format!("{}:\n", label_done).as_str());
+            let result_reg : String = 
+            if subexpr_node.properties.contains_key("register") {
+                subexpr_node.properties["register"].clone()
+            }
+            else {
+                reg_name
+            };
+            current_node.properties.insert("register".to_string(), result_reg);
+        }
+        NodeType::Relational_Subexpr => {
+            if current_node.properties.contains_key("operator") {
 
-            current_node.properties.insert("register".to_string(), left_reg);
+                let left_reg : String = current_node.properties["prev_register"].clone();
+
+                let unary_node : &mut Node = &mut current_node.children[1];
+                generate(program_string, unary_node, symbol_table, register_manager);
+                let right_reg : String = unary_node.properties["register"].clone();
+
+                let relational_subexpr_node : &mut Node = &mut current_node.children[2];
+                generate(program_string, relational_subexpr_node, symbol_table, register_manager);
+
+                let operator : String = current_node.properties["operator"].clone();
+
+                let label_true : String = label_name(label_create());
+                let label_done : String = label_name(label_create());
+
+                //After doing comparison, the results will be stored in the register named in arith_node_left
+                
+                program_string.push_str(format!("\tcmp {}, {}\n", left_reg, right_reg).as_str());
+                program_string.push_str(format!("\t{} {}\n", jump_command(operator), label_true).as_str());
+                program_string.push_str(format!("\tmov {}, 0\n", left_reg).as_str());
+                program_string.push_str(format!("\tjmp {}\n", label_done).as_str());
+                program_string.push_str(format!("{}:\n", label_true).as_str());
+                program_string.push_str(format!("\tmov {}, 1\n", left_reg).as_str());
+                program_string.push_str(format!("{}:\n", label_done).as_str());
+
+                current_node.properties.insert("register".to_string(), left_reg);
+            }
+            else if current_node.properties.contains_key("terminal"){
+                let unary_node : &mut Node = &mut current_node.children[0];
+                generate(program_string, unary_node, symbol_table, register_manager);
+
+                let result_reg : String = unary_node.properties["register"].clone();
+                current_node.properties.insert("register".to_string(), result_reg.clone());
+            }
             
         }
+        
         NodeType::Condition_Expr => {
             let expr_node : &mut Node = &mut current_node.children[0];
 

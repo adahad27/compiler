@@ -31,7 +31,7 @@ fn main() {
     if parse(&mut current_node, &token_list, &symbol_table) {
         
         let filename : String = "main_generated.asm".to_string();
-        let filename_ir : String = "main_generated.ll".to_string();
+        let _filename_ir : String = "main_generated.ll".to_string();
         // generate_ir(&filename_ir, &mut current_node, &symbol_table);
         generate_code(&filename, &mut current_node, &symbol_table);
     }

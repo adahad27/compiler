@@ -330,7 +330,7 @@ pub fn parse_assign_expr(current_node : &mut Node, tokens : &Vec<Token>, symbol_
             expr_node = create_node(NodeType::Arith_Expr);
         }
         else if symbol_table.scope_lookup(&identity_node.properties["value"]).unwrap().primitive == "bool".to_string() {
-            expr_node = create_node(NodeType::Condition_Expr);
+            expr_node = create_node(NodeType::Or_Expr);
         }
 
         if

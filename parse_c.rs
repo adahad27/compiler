@@ -88,7 +88,6 @@ x   func_decl -> primitive identifier (arguments);
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::thread::current;
 
 use crate::token_c::{TokenType, Token};
 use crate::expression_c::{*};
