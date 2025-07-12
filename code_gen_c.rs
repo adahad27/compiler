@@ -222,7 +222,6 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 current_node.properties.insert("register".to_string(), result_reg.clone());
             }
             
-            //TODO: Add terminal case for when factor_node end
         }
         NodeType::Arith_Factor => {
             let operand : String = current_node.properties["terminal"].clone();
@@ -660,7 +659,6 @@ impl RegisterManager {
             index += 1;
         }
         //Currently throw errors if there are no available registers.
-        //TODO: Add register spilling insteada of throwing errors
         return Option::None;
     }
 

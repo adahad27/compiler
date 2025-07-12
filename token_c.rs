@@ -137,8 +137,6 @@ pub fn construct_token(input : &String)-> Token{
     let identifier_regex : Regex = Regex::new(r"[[:alpha:]]+").unwrap();
     let integer_regex : Regex = Regex::new(r"[0-9]+").unwrap();
 
-    //TODO: Replace this with a match statement
-
     if is_separator(&input){
         t_type = TokenType::Separator;
     }

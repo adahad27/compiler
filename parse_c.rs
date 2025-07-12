@@ -316,7 +316,8 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     let mut body_node : Node = create_node(NodeType::Body);
     let mut close_curly_node : Node = create_node(NodeType::Separator);
 
-    arguments_node.properties.insert("current_arg".to_string(), (-2).to_string());    
+    arguments_node.properties.insert("current_arg".to_string(), (-2).to_string());
+    body_node.properties.insert("return_type".to_string(), primitive_node.properties["value"].clone());
 
     if 
     parse(&mut primitive_node, tokens, current_table) &&
@@ -328,7 +329,8 @@ fn parse_func_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table 
     parse(&mut body_node, tokens, current_table) &&
     parse(&mut close_curly_node, tokens, current_table)
     {
-        symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], true);
+        let args : u32 = arguments_node.properties["arguments"].parse::<u32>().unwrap();
+        symbol_table.bind(&identifier_node.properties["value"], &primitive_node.properties["value"], args, true);
         current_node.properties.insert("var_alloc".to_string(), body_node.properties["var_alloc"].clone());
         current_node.properties.insert("arguments".to_string(), arguments_node.properties["arguments"].clone());
         current_node.children.push(primitive_node);

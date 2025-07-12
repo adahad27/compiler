@@ -365,6 +365,13 @@ pub fn parse_func_call(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
     parse(&mut open_paren_node, tokens, symbol_table) &&
     parse(&mut arguments_node, tokens, symbol_table) &&
     parse(&mut close_paren_node, tokens, symbol_table) {
+
+        let arg_num : u32 = arguments_node.properties["arguments"].parse::<u32>().unwrap();
+        if arg_num != symbol_table.scope_lookup(&identifier_node.properties["value"]).unwrap().args {
+            //Number of arguments passed to function call does not match function definition
+            println!("Number of arguments for {} function call does not match definition", &identifier_node.properties["value"]);
+            return false;
+        }
         
         current_node.properties.insert("arguments".to_string(), arguments_node.properties["arguments"].clone());
 

@@ -100,7 +100,7 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
         current_node.children.push(primitive_node);
 
         if is_identifier(&tokens[get_current_token_index()].val) {
-            symbol_table.bind(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"], false);
+            symbol_table.bind(&tokens[get_current_token_index()].val, &current_node.children[0].properties["value"], 0,false);
         }
 
         if parse(&mut expr_node, tokens, symbol_table) {
@@ -156,6 +156,11 @@ pub fn parse_body(current_node : &mut Node, tokens : &Vec<Token>, symbol_table :
     let mut var_alloc : u32 = 0;
     while tokens[get_current_token_index()].val != "}".to_string(){
         let mut stmt_node : Node = create_node(NodeType::Statement);
+
+        if current_node.properties.contains_key("return_type") {
+            stmt_node.properties.insert("return_type".to_string(), current_node.properties["return_type"].clone());
+        }
+        
         if parse(&mut stmt_node, tokens, symbol_table) {
             if stmt_node.properties.contains_key("var_alloc") {
                 var_alloc += 1;
@@ -359,15 +364,7 @@ pub fn parse_while_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_t
 }
 
 pub fn parse_for_stmt(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) -> bool {
-    //New scope made here
 
-    /* This is the structure of a for loop:
-    for(init_expr ; expr ; next_expr) {
-        body
-    }
-    init_expr and next_expr can both be empty.
-    If expr is left empty, it is assumed to be true.
-     */
     symbol_table.push_child(symbol_table.get_ordinal());
     let current_table = &symbol_table.children.borrow()[symbol_table.children.borrow().len() - 1];
 
