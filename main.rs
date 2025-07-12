@@ -18,8 +18,12 @@ fn main() {
 
     let args : Vec<String> = env::args().collect();
     if args.len() < 2 {
-        println!("Please type in an actual file!");
+        println!("Please enter the file you want to compile");
         return;
+    }
+    else if args.len() > 3 {
+        println!("The format of the input is \"./compiler <file for compilation> (optional)<name of output file>\"");
+        return
     }
 
     let symbol_table = create_new_stnode(1);
@@ -29,8 +33,14 @@ fn main() {
     let mut current_node : Node = create_node(NodeType::Program_Start);
 
     if parse(&mut current_node, &token_list, &symbol_table) {
-        
-        let filename : String = "main_generated.asm".to_string();
+        let filename : String;
+        if args.len() == 3 {
+            filename = args[2].clone();
+        }
+        else {
+            filename = "a.asm".to_string();
+        }
+
         let _filename_ir : String = "main_generated.ll".to_string();
         // generate_ir(&filename_ir, &mut current_node, &symbol_table);
         generate_code(&filename, &mut current_node, &symbol_table);

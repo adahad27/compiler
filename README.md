@@ -11,6 +11,7 @@ Implemented features of <C:
 2. Support for arithmetic, boolean, and relational operators
 3. Support for conditional and loop statements
 4. Function declarations, definitions, and calls
+5. Single line comments
 
 Planned features of <C:
 1. Support for char primitive type

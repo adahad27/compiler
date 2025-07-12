@@ -34,6 +34,30 @@ fn generate_start_stub(program_string : &mut String, symbol_table : &Rc<STNode>)
     }
 }
 
+fn generate_expr(program_string : &mut String, current_node : &mut Node, symbol_table : &Rc<STNode>, register_manager : &mut RegisterManager) {
+    assert!(current_node.properties.contains_key("terminal"));
+    //Left operand is a constant
+    
+    //Move it into a register
+    let expr_node : &mut Node = &mut current_node.children[0];
+    generate(program_string, expr_node, symbol_table, register_manager);
+    let reg_name : String = expr_node.properties["register"].clone();
+
+
+    let subexpr_node : &mut Node = &mut current_node.children[1];
+
+    subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
+    generate(program_string, subexpr_node, symbol_table, register_manager);
+    let result_reg : String = 
+    if subexpr_node.properties.contains_key("register") {
+        subexpr_node.properties["register"].clone()
+    }
+    else {
+        reg_name
+    };
+    current_node.properties.insert("register".to_string(), result_reg);
+}
+
 fn generate(program_string : &mut String, current_node : &mut Node, symbol_table : &Rc<STNode>, register_manager : &mut RegisterManager) {
     match current_node.node_type {
         NodeType::Func_Decl => {
@@ -43,10 +67,10 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
 
             //Save arguments to function on stack here
-            let num_args: u32 = current_node.properties["arguments"].parse::<u32>().unwrap();
-            if num_args > 0 {
-                program_string.push_str(format!("\tsub rsp, {}\n", num_args * 8).as_str());
-            }
+            // let num_args: u32 = current_node.properties["arguments"].parse::<u32>().unwrap();
+            // if num_args > 0 {
+            //     program_string.push_str(format!("\tsub rsp, {}\n", num_args * 8).as_str());
+            // }
             
 
             //Allocate space for all local variables here
@@ -123,29 +147,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
 
         }
         NodeType::Arith_Expr => {
-
-            assert!(current_node.properties.contains_key("terminal"));
-            //Left operand is a constant
-            
-            //Move it into a register
-            let term_node : &mut Node = &mut current_node.children[0];
-            generate(program_string, term_node, symbol_table, register_manager);
-            let reg_name : String = term_node.properties["register"].clone();
-
-
-            let subexpr_node : &mut Node = &mut current_node.children[1];
-
-            subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, subexpr_node, symbol_table, register_manager);
-            let result_reg : String = 
-            if subexpr_node.properties.contains_key("register") {
-                subexpr_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
-
+            generate_expr(program_string, current_node, symbol_table, register_manager);
         }
         NodeType::Arith_Subexpr => {
             if current_node.properties.contains_key("operator") {
@@ -179,30 +181,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::Arith_Term => {
-            
-            assert!(current_node.properties.contains_key("terminal"));
-
-            //Left operand is a constant
-                
-            //Move it into a register
-            let factor_node : &mut Node = &mut current_node.children[0];
-            generate(program_string, factor_node, symbol_table, register_manager);
-            let reg_name : String = factor_node.properties["register"].clone();
-
-            let mut subterm_node : &mut Node = &mut current_node.children[1];
-
-            subterm_node.properties.insert("prev_register".to_string(), reg_name.clone());
-
-            generate(program_string, &mut subterm_node, symbol_table, register_manager);
-            let result_reg : String = 
-            if subterm_node.properties.contains_key("register") {
-                subterm_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
-            //Free allocated register
+           generate_expr(program_string, current_node, symbol_table, register_manager);    //Free allocated register
         }
         NodeType::Arith_Subterm => {
             if current_node.properties.contains_key("operator") {
@@ -277,24 +256,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::Or_Expr => {
-            assert!(current_node.properties.contains_key("terminal"));
-            let and_expr_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, and_expr_node, symbol_table, register_manager);
-            let reg_name : String = and_expr_node.properties["register"].clone();
-
-
-            let or_subexpr_node: &mut Node = &mut current_node.children[1];
-            or_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, or_subexpr_node, symbol_table, register_manager);
-            
-            let result_reg : String = 
-            if or_subexpr_node.properties.contains_key("register") {
-                or_subexpr_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
+            generate_expr(program_string, current_node, symbol_table, register_manager);
         }
         NodeType::Or_Subexpr => {
             if current_node.properties.contains_key("operator") {
@@ -317,25 +279,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::And_Expr => {
-            assert!(current_node.properties.contains_key("terminal"));
-
-            let equality_expr_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, equality_expr_node, symbol_table, register_manager);
-            let reg_name : String = equality_expr_node.properties["register"].clone();
-
-
-            let and_subexpr_node: &mut Node = &mut current_node.children[1];
-            and_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, and_subexpr_node, symbol_table, register_manager);
-            
-            let result_reg : String = 
-            if and_subexpr_node.properties.contains_key("register") {
-                and_subexpr_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
+            generate_expr(program_string, current_node, symbol_table, register_manager);
         }
         NodeType::And_Subexpr => {
             if current_node.properties.contains_key("operator") {
@@ -358,24 +302,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::Equality_Expr => {
-            assert!(current_node.properties.contains_key("terminal"));
-            let relational_expr_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, relational_expr_node, symbol_table, register_manager);
-            let reg_name : String = relational_expr_node.properties["register"].clone();
-
-
-            let equality_subexpr_node: &mut Node = &mut current_node.children[1];
-            equality_subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, equality_subexpr_node, symbol_table, register_manager);
-            
-            let result_reg : String = 
-            if equality_subexpr_node.properties.contains_key("register") {
-                equality_subexpr_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
+            generate_expr(program_string, current_node, symbol_table, register_manager);
         }
         NodeType::Equality_Subexpr => {
             if current_node.properties.contains_key("operator") {
@@ -443,24 +370,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
             }
         }
         NodeType::Relational_Expr => {
-            assert!(current_node.properties.contains_key("terminal"));
-            let expr_node: &mut Node = &mut current_node.children[0];
-            generate(program_string, expr_node, symbol_table, register_manager);
-            let reg_name : String = expr_node.properties["register"].clone();
-
-
-            let subexpr_node: &mut Node = &mut current_node.children[1];
-            subexpr_node.properties.insert("prev_register".to_string(), reg_name.clone());
-            generate(program_string, subexpr_node, symbol_table, register_manager);
-            
-            let result_reg : String = 
-            if subexpr_node.properties.contains_key("register") {
-                subexpr_node.properties["register"].clone()
-            }
-            else {
-                reg_name
-            };
-            current_node.properties.insert("register".to_string(), result_reg);
+            generate_expr(program_string, current_node, symbol_table, register_manager);
         }
         NodeType::Relational_Subexpr => {
             if current_node.properties.contains_key("operator") {
@@ -499,8 +409,7 @@ fn generate(program_string : &mut String, current_node : &mut Node, symbol_table
                 current_node.properties.insert("register".to_string(), result_reg.clone());
             }
             
-        }
-        
+        }       
         NodeType::Condition_Expr => {
             let expr_node : &mut Node = &mut current_node.children[0];
 
