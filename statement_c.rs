@@ -90,7 +90,7 @@ pub fn parse_statement(current_node : &mut Node, tokens : &Vec<Token>, symbol_ta
 
 pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_table : &Rc<STNode>) ->bool {
     let mut primitive_node : Node = create_node(NodeType::Primitive);
-    let mut identity_node : Node = create_node(NodeType::Identifier);
+    let mut identifier_node : Node = create_node(NodeType::Identifier);
     
     
 
@@ -110,11 +110,28 @@ pub fn parse_var_decl(current_node : &mut Node, tokens : &Vec<Token>, symbol_tab
             return true;
 
         }
-        else if parse(&mut identity_node, tokens, symbol_table) {
-            current_node.children.push(identity_node);
+        else if parse(&mut identifier_node, tokens, symbol_table) {
+            current_node.children.push(identifier_node);
 
             current_node.properties.insert("value".to_string(), "0".to_string());
             current_node.properties.insert("identifier".to_string(), current_node.children[1].properties["value"].clone());
+
+            let mut s_bracket_open_node : Node = create_node(NodeType::Separator);
+            let mut constant_node : Node = create_node(NodeType::Constant);
+            let mut s_bracket_close_node : Node = create_node(NodeType::Separator);
+
+            if 
+            tokens[get_current_token_index()].val == "[" &&
+            parse(&mut s_bracket_open_node, tokens, symbol_table) &&
+            parse(&mut constant_node, tokens, symbol_table) &&
+            parse(&mut s_bracket_close_node, tokens, symbol_table){
+            
+                current_node.children.push(s_bracket_open_node);
+                current_node.children.push(constant_node);
+                current_node.children.push(s_bracket_close_node);
+
+            }
+
             return true;
 
         }

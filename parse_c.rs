@@ -27,6 +27,7 @@ x   func_decl -> primitive identifier (arguments);
 
     statement -> var_decl;
     var_decl -> primitive identifier
+    var_decl -> primitive identifier\[constant\]
     var_decl -> primitive assign_expr
 
     statement -> assign_expr ;
